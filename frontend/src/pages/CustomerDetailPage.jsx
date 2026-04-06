@@ -225,7 +225,7 @@ export default function CustomerDetailPage() {
                 )}
               </div>
               <p className="text-xs text-gray-400 mt-0.5">
-                {customer.email} &middot; Balance: <span className={parseFloat(customer.balance) >= 0 ? 'text-emerald-600' : 'text-red-600'}>R{parseFloat(customer.balance || 0).toFixed(2)}</span> &middot; Since {fmtDate(customer.created_at)}
+                Balance: <span className={parseFloat(customer.balance) >= 0 ? 'text-emerald-600' : 'text-red-600'}>R{parseFloat(customer.balance || 0).toFixed(2)}</span> &middot; Since {fmtDate(customer.created_at)}
               </p>
             </div>
           </div>
