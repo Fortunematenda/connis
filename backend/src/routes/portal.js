@@ -4,7 +4,7 @@ const path = require('path');
 const { authenticateCustomer } = require('../middleware/customerAuth');
 const {
   customerLogin, getMe, getTransactions, redeemVoucher,
-  getTickets, createTicket, getTicketById, addTicketComment, getStatistics,
+  getTickets, createTicket, getTicketById, addTicketComment, getStatistics, getCompany,
 } = require('../controllers/portalController');
 const { getCustomerMessages, sendCustomerMessage, getCustomerUnreadCount } = require('../controllers/messagesController');
 
