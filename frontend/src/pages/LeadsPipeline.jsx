@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { Plus, RefreshCw, Loader2 } from 'lucide-react';
+import { Plus, RefreshCw, Loader2, LayoutGrid, List } from 'lucide-react';
 import toast from 'react-hot-toast';
 import KanbanColumn from '../components/KanbanColumn';
 import LeadCard from '../components/LeadCard';
@@ -25,6 +25,7 @@ export default function LeadsPipeline() {
   const [modalOpen, setModalOpen] = useState(false);
   const [activeId, setActiveId] = useState(null);
   const [selectedLead, setSelectedLead] = useState(null);
+  const [viewMode, setViewMode] = useState('kanban'); // 'kanban' | 'list'
 
   // Configure drag sensor — require 5px movement before drag starts (prevents accidental drags)
   const sensors = useSensors(
@@ -123,6 +124,21 @@ export default function LeadsPipeline() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {/* View Toggle */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`p-1.5 rounded-md transition-colors ${viewMode === 'kanban' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400'}`}
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400'}`}
+            >
+              <List size={16} />
+            </button>
+          </div>
           <button
             onClick={fetchLeads}
             disabled={loading}
@@ -147,7 +163,7 @@ export default function LeadsPipeline() {
           <Loader2 size={32} className="animate-spin text-blue-500" />
           <span className="ml-3 text-gray-500">Loading pipeline...</span>
         </div>
-      ) : (
+      ) : viewMode === 'kanban' ? (
         /* Kanban board */
         <DndContext
           sensors={sensors}
@@ -176,6 +192,52 @@ export default function LeadsPipeline() {
             ) : null}
           </DragOverlay>
         </DndContext>
+      ) : (
+        /* List view */
+        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b bg-gray-50/50">
+                <th className="px-4 py-3 font-medium">Name</th>
+                <th className="px-4 py-3 font-medium">Contact</th>
+                <th className="px-4 py-3 font-medium">Address</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Source</th>
+                <th className="px-4 py-3 font-medium">Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leads.map((lead) => (
+                <tr
+                  key={lead.id}
+                  onClick={() => setSelectedLead(lead)}
+                  className="border-b last:border-0 hover:bg-gray-50 cursor-pointer"
+                >
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-gray-900">{lead.name}</div>
+                    <div className="text-xs text-gray-400">{lead.email}</div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">{lead.phone || '—'}</td>
+                  <td className="px-4 py-3 text-gray-600">{lead.address || '—'}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                      lead.status === 'converted' ? 'text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200/60' :
+                      lead.status === 'lost' ? 'text-gray-600 bg-gray-100' :
+                      'text-blue-700 bg-blue-50 ring-1 ring-blue-200/60'
+                    }`}>
+                      {STAGES.find(s => s.key === lead.status)?.label || lead.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">{lead.source || '—'}</td>
+                  <td className="px-4 py-3 text-xs text-gray-500">{new Date(lead.created_at).toLocaleDateString()}</td>
+                </tr>
+              ))}
+              {leads.length === 0 && (
+                <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-400">No leads found</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {/* Add Lead modal */}
