@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Search, RefreshCw, Download } from 'lucide-react';
+import { Loader2, Search, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { customersApi, usersApi, mikrotikApi } from '../services/api';
+import { customersApi, usersApi } from '../services/api';
 
 // ── Main Customers Page ─────────────────────────────────────
 
@@ -10,7 +10,6 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
   const [onlineMap, setOnlineMap] = useState({});
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
   const [search, setSearch] = useState('');
   const [perPage, setPerPage] = useState(50);
   const [page, setPage] = useState(1);
@@ -34,19 +33,6 @@ export default function CustomersPage() {
   };
 
   useEffect(() => { fetchData(); }, []);
-
-  const handleSync = async () => {
-    setSyncing(true);
-    try {
-      const res = await mikrotikApi.syncCustomers();
-      const d = res.data;
-      toast.success(`Imported ${d.imported} customers (${d.skipped} already existed)`);
-      if (d.imported > 0) fetchData();
-    } catch (e) {
-      toast.error(e.message || 'Sync failed — check router settings');
-    }
-    setSyncing(false);
-  };
 
   // Search
   const searched = customers.filter((c) => {
@@ -98,18 +84,11 @@ export default function CustomersPage() {
           <h1 className="text-xl font-bold text-gray-900">Customers</h1>
           <p className="text-xs text-gray-400 mt-0.5">{customers.length} total</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={handleSync} disabled={syncing}
-            className="flex items-center gap-2 px-3.5 py-2 text-sm text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 shadow-sm">
-            <Download size={14} className={syncing ? 'animate-bounce' : ''} />
-            {syncing ? 'Syncing...' : 'Sync from Router'}
-          </button>
-          <button onClick={fetchData} disabled={loading}
-            className="flex items-center gap-2 px-3.5 py-2 text-sm text-gray-600 bg-white border rounded-lg hover:bg-gray-50 disabled:opacity-50 shadow-sm">
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            Refresh
-          </button>
-        </div>
+        <button onClick={fetchData} disabled={loading}
+          className="flex items-center gap-2 px-3.5 py-2 text-sm text-gray-600 bg-white border rounded-lg hover:bg-gray-50 disabled:opacity-50 shadow-sm">
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          Refresh
+        </button>
       </div>
 
       {/* Table Card */}

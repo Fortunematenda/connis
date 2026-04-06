@@ -1,7 +1,49 @@
 const pool = require('../config/db');
 const { ApiError } = require('../middleware/errorHandler');
 const { encrypt, decrypt } = require('../utils/encryption');
-const { createMikroTikClient } = require('../services/mikrotik');
+const { createMikroTikClient, getPPPoESecrets } = require('../services/mikrotik');
+
+// Background sync: import PPPoE secrets from router as customers
+const backgroundSync = async (companyId, routerConfig) => {
+  try {
+    const secrets = await getPPPoESecrets(routerConfig);
+    const existingRes = await pool.query('SELECT username FROM users WHERE company_id = $1', [companyId]);
+    const existing = new Set(existingRes.rows.map(r => r.username));
+
+    const plansRes = await pool.query('SELECT id, name, mikrotik_profile FROM plans WHERE company_id = $1', [companyId]);
+    const profileToPlan = {};
+    plansRes.rows.forEach(p => {
+      if (p.mikrotik_profile) profileToPlan[p.mikrotik_profile] = p.id;
+      profileToPlan[p.name] = p.id;
+    });
+
+    let imported = 0;
+    for (const secret of secrets) {
+      const username = secret.name;
+      if (!username || existing.has(username)) continue;
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const userRes = await client.query(
+          `INSERT INTO users (company_id, username, full_name, password, active, address)
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+          [companyId, username, secret.comment || username, secret.password || '', secret.disabled !== 'true', secret['caller-id'] || null]
+        );
+        const planId = profileToPlan[secret.profile] || null;
+        if (planId) {
+          await client.query('INSERT INTO user_plans (user_id, plan_id, active) VALUES ($1, $2, TRUE) ON CONFLICT DO NOTHING', [userRes.rows[0].id, planId]);
+        }
+        await client.query('COMMIT');
+        imported++;
+        existing.add(username);
+      } catch { await client.query('ROLLBACK'); }
+      finally { client.release(); }
+    }
+    console.log(`[SYNC] Auto-imported ${imported} customers from router for company ${companyId}`);
+  } catch (err) {
+    console.warn(`[SYNC] Background sync failed: ${err.message}`);
+  }
+};
 
 // POST /routers — Add a new router for the company
 const addRouter = async (req, res, next) => {
@@ -28,6 +70,14 @@ const addRouter = async (req, res, next) => {
     );
 
     res.status(201).json({ success: true, data: result.rows[0] });
+
+    // Auto-sync customers from router in background
+    backgroundSync(companyId, {
+      host: ip_address,
+      user: username || 'admin',
+      password,
+      port: port || 8728,
+    }).catch(() => {});
   } catch (err) {
     next(err);
   }

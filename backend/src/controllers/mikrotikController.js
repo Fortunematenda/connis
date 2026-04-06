@@ -92,11 +92,11 @@ const syncCustomersFromRouter = async (req, res, next) => {
 
     // Get plans to match profiles
     const plansRes = await pool.query(
-      'SELECT id, name, profile_name FROM plans WHERE company_id = $1', [companyId]
+      'SELECT id, name, mikrotik_profile FROM plans WHERE company_id = $1', [companyId]
     );
     const profileToPlan = {};
     plansRes.rows.forEach(p => {
-      if (p.profile_name) profileToPlan[p.profile_name] = p.id;
+      if (p.mikrotik_profile) profileToPlan[p.mikrotik_profile] = p.id;
       profileToPlan[p.name] = p.id;
     });
 
