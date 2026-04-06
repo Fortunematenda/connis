@@ -36,6 +36,7 @@ const navItems = [
 ];
 
 const accountingItems = [
+  { to: '/accounting', icon: DollarSign, label: 'Dashboard', end: true },
   { to: '/accounting/transactions', icon: Receipt, label: 'Transactions' },
   { to: '/accounting/invoices', icon: FileText, label: 'Invoices' },
   { to: '/accounting/quotes', icon: ClipboardList, label: 'Quotes' },
@@ -120,8 +121,8 @@ export default function Sidebar({ mobileOpen, onClose }) {
 
           {acctOpen && (
             <div className="ml-4 pl-3 border-l border-white/10 space-y-0.5">
-              {accountingItems.map(({ to, icon: Icon, label }) => (
-                <NavLink key={to} to={to} onClick={handleNav} className={linkClass}>
+              {accountingItems.map(({ to, icon: Icon, label, end }) => (
+                <NavLink key={to} to={to} end={end} onClick={handleNav} className={linkClass}>
                   <Icon size={16} />
                   {label}
                 </NavLink>

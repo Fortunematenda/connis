@@ -142,9 +142,9 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={<Coins size={20} />}
-          label="Monthly Revenue"
-          value={fmtCurrency(c.monthly_revenue)}
-          sub={`${c.active_plans || 0} active plans`}
+          label="Active Plans"
+          value={c.active_plans || 0}
+          sub="service plans"
           color="amber"
           link="/plans"
         />

@@ -512,6 +512,15 @@ export const invoicesApi = {
   },
 };
 
+// ── Accounting Dashboard API ──────────────────────────────────
+
+export const accountingDashboardApi = {
+  getStats: async () => {
+    const res = await authFetch(`${API_BASE}/accounting/dashboard`);
+    return handleResponse(res);
+  },
+};
+
 // ── Quotes API (admin) ────────────────────────────────────────
 
 export const quotesApi = {

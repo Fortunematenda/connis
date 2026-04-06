@@ -20,6 +20,7 @@ import InvoicesPage from './pages/InvoicesPage';
 import QuotesPage from './pages/QuotesPage';
 import CreditNotesPage from './pages/CreditNotesPage';
 import ItemsPage from './pages/ItemsPage';
+import AccountingDashboard from './pages/AccountingDashboard';
 import PortalLogin from './pages/portal/PortalLogin';
 import PortalLayout from './components/portal/PortalLayout';
 import PortalDashboard from './pages/portal/PortalDashboard';
@@ -60,6 +61,7 @@ export default function App() {
         <Route path="/vouchers" element={<VouchersPage />} />
         <Route path="/messages" element={<MessagesPage />} />
         <Route path="/messages/:userId" element={<MessagesPage />} />
+        <Route path="/accounting" element={<AccountingDashboard />} />
         <Route path="/accounting/transactions" element={<TransactionsPage />} />
         <Route path="/accounting/invoices" element={<InvoicesPage />} />
         <Route path="/accounting/quotes" element={<QuotesPage />} />

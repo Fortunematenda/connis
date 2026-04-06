@@ -29,6 +29,7 @@ const invoicesRoutes = require('./routes/invoices');
 const quotesRoutes = require('./routes/quotes');
 const creditNotesRoutes = require('./routes/creditNotes');
 const billableItemsRoutes = require('./routes/billableItems');
+const { getAccountingDashboard } = require('./controllers/accountingDashboardController');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -72,6 +73,7 @@ app.use('/api/invoices', protect, invoicesRoutes);
 app.use('/api/quotes', protect, quotesRoutes);
 app.use('/api/credit-notes', protect, creditNotesRoutes);
 app.use('/api/billable-items', protect, billableItemsRoutes);
+app.get('/api/accounting/dashboard', protect, getAccountingDashboard);
 
 // ── 404 handler ────────────────────────────────────────────
 app.use((req, res) => {
