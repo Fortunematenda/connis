@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const { getRouterConfigForCompany } = require('../services/routerResolver');
 const sessionCache = require('../services/sessionCache');
+const radiusDb = require('../config/radiusDb');
 
 const getDashboardStats = async (req, res, next) => {
   try {
@@ -39,13 +40,19 @@ const getDashboardStats = async (req, res, next) => {
         WHERE u.company_id = $1 AND up.active = TRUE
       `, [companyId]),
       pool.query(`
-        SELECT u.id, u.full_name, u.username, u.seq_id, u.created_at, u.active,
-          p.name AS plan_name
+        SELECT u.id, u.full_name, u.username, u.seq_id, u.active,
+          p.name AS plan_name,
+          COALESCE(SUM(r.acctinputoctets), 0) AS download_bytes,
+          COALESCE(SUM(r.acctoutputoctets), 0) AS upload_bytes,
+          COALESCE(SUM(r.acctsessiontime), 0) AS total_time
         FROM users u
         LEFT JOIN user_plans up ON u.id = up.user_id AND up.active = TRUE
         LEFT JOIN plans p ON up.plan_id = p.id
+        LEFT JOIN radacct r ON r.username = u.username AND r.acctstarttime >= (NOW() - INTERVAL '30 days')
         WHERE u.company_id = $1
-        ORDER BY u.created_at DESC LIMIT 5
+        GROUP BY u.id, u.full_name, u.username, u.seq_id, u.active, p.name
+        ORDER BY SUM(r.acctinputoctets) DESC NULLS LAST
+        LIMIT 10
       `, [companyId]),
       pool.query(`
         SELECT t.id, t.subject, t.status, t.priority, t.created_at,
@@ -111,7 +118,7 @@ const getDashboardStats = async (req, res, next) => {
         },
         lead_breakdown: leadBreakdown,
         ticket_breakdown: ticketBreakdown,
-        recent_customers: recentCustomersRes.rows,
+        top_bandwidth_users: recentCustomersRes.rows,
         recent_tickets: recentTicketsRes.rows,
         recent_leads: recentLeadsRes.rows,
       },

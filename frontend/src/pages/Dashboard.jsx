@@ -11,6 +11,14 @@ import { useAuth } from '../contexts/AuthContext';
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '—';
 const fmtCurrency = (v) => 'R' + Number(v || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+const formatBytes = (bytes) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
 const TICKET_STATUS_COLORS = {
   open: 'text-blue-700 bg-blue-50',
   in_progress: 'text-amber-700 bg-amber-50',
@@ -163,17 +171,17 @@ export default function Dashboard() {
 
       {/* ── Recent Activity Grid ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Recent Customers */}
+        {/* Top Bandwidth Users */}
         <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-800">Recent Customers</h3>
+            <h3 className="text-sm font-semibold text-gray-800">Top Bandwidth Users (30 days)</h3>
             <Link to="/customers" className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
               View all <ArrowRight size={12} />
             </Link>
           </div>
-          {data?.recent_customers?.length > 0 ? (
+          {data?.top_bandwidth_users?.length > 0 ? (
             <div className="divide-y">
-              {data.recent_customers.map((cu) => (
+              {data.top_bandwidth_users.map((cu) => (
                 <div key={cu.id} onClick={() => navigate(`/customers/${cu.id}`)}
                   className="px-5 py-3 flex items-center justify-between hover:bg-gray-50 cursor-pointer transition-colors">
                   <div className="flex items-center gap-3">
@@ -185,12 +193,15 @@ export default function Dashboard() {
                       <p className="text-[11px] text-gray-400">{cu.plan_name || 'No plan'} &middot; #{String(cu.seq_id || 0).padStart(3, '0')}</p>
                     </div>
                   </div>
-                  <span className="text-[11px] text-gray-400">{fmtDate(cu.created_at)}</span>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-gray-900">{formatBytes(cu.download_bytes || 0)}</p>
+                    <p className="text-[10px] text-gray-400">↓ download</p>
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-400 text-center py-8">No customers yet</p>
+            <p className="text-sm text-gray-400 text-center py-8">No bandwidth data yet</p>
           )}
         </div>
 
