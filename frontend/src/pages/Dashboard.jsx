@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Users, UserCheck, Wifi, WifiOff, Target, Ticket, CheckSquare,
-  DollarSign, ArrowRight, ArrowUpRight, Loader2,
+  Coins, ArrowRight, ArrowUpRight, Loader2,
   AlertTriangle, Clock, BarChart3, Ban, Power,
 } from 'lucide-react';
 import { dashboardApi } from '../services/api';
@@ -40,17 +40,18 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [bandwidthPeriod, setBandwidthPeriod] = useState('month');
 
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await dashboardApi.getStats();
+        const res = await dashboardApi.getStats(bandwidthPeriod);
         setData(res.data);
       } catch { /* ignore */ }
       setLoading(false);
     };
     load();
-  }, []);
+  }, [bandwidthPeriod]);
 
   if (loading) {
     return (
@@ -98,7 +99,7 @@ export default function Dashboard() {
         <StatCard
           icon={<Users size={22} />}
           label="Total Customers"
-          value={c.total_customers}
+          value={c.total_customers || 0}
           sub="all customers"
           color="blue"
           link="/customers"
@@ -107,8 +108,8 @@ export default function Dashboard() {
         <StatCard
           icon={<Wifi size={22} />}
           label="Online Now"
-          value={c.online_customers}
-          sub={`${c.active_customers} active customers`}
+          value={c.online_customers || 0}
+          sub={`${c.active_customers || 0} active customers`}
           color="emerald"
           link="/customers"
           highlight={c.online_customers > 0}
@@ -117,7 +118,7 @@ export default function Dashboard() {
         <StatCard
           icon={<WifiOff size={22} />}
           label="Active but Offline"
-          value={Math.max(0, c.active_customers - c.online_customers)}
+          value={Math.max(0, (c.active_customers || 0) - (c.online_customers || 0))}
           sub="not currently using"
           color="amber"
           link="/customers"
@@ -136,7 +137,7 @@ export default function Dashboard() {
       {/* ── Secondary Stats Row ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          icon={<DollarSign size={20} />}
+          icon={<Coins size={20} />}
           label="Monthly Revenue"
           value={fmtCurrency(c.monthly_revenue)}
           sub={`${c.active_plans} active plans`}
@@ -174,10 +175,21 @@ export default function Dashboard() {
         {/* Top Bandwidth Users */}
         <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-800">Top Bandwidth Users (30 days)</h3>
-            <Link to="/customers" className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
-              View all <ArrowRight size={12} />
-            </Link>
+            <h3 className="text-sm font-semibold text-gray-800">Top Bandwidth Users</h3>
+            <div className="flex items-center gap-2">
+              <select
+                value={bandwidthPeriod}
+                onChange={(e) => setBandwidthPeriod(e.target.value)}
+                className="text-xs border border-gray-200 rounded-md px-2 py-1 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="day">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+              </select>
+              <Link to="/customers" className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                View all <ArrowRight size={12} />
+              </Link>
+            </div>
           </div>
           {data?.top_bandwidth_users?.length > 0 ? (
             <div className="divide-y">

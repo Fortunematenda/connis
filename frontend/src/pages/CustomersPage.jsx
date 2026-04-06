@@ -174,7 +174,11 @@ export default function CustomersPage() {
                       {String(c.seq_id || 0).padStart(3, '0')}
                     </td>
                     <td className="px-3 py-3">
-                      {onlineMap[c.username] ? (
+                      {!c.active ? (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-red-600">
+                          <span className="w-2 h-2 rounded-full bg-red-500" />Blocked
+                        </span>
+                      ) : onlineMap[c.username] ? (
                         <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-700">
                           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />Online
                         </span>

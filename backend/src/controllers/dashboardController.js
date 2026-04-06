@@ -6,6 +6,13 @@ const radiusDb = require('../config/radiusDb');
 const getDashboardStats = async (req, res, next) => {
   try {
     const companyId = req.companyId;
+    const { period = 'month' } = req.query; // 'day', 'week', 'month'
+
+    // Determine interval based on period
+    let interval = '30 days';
+    if (period === 'day') interval = '1 day';
+    if (period === 'week') interval = '7 days';
+    if (period === 'month') interval = '30 days';
 
     // Run all queries in parallel
     const [
@@ -48,7 +55,7 @@ const getDashboardStats = async (req, res, next) => {
         FROM users u
         LEFT JOIN user_plans up ON u.id = up.user_id AND up.active = TRUE
         LEFT JOIN plans p ON up.plan_id = p.id
-        LEFT JOIN radacct r ON r.username = u.username AND r.acctstarttime >= (NOW() - INTERVAL '30 days')
+        LEFT JOIN radacct r ON r.username = u.username AND r.acctstarttime >= (NOW() - INTERVAL '${interval}')
         WHERE u.company_id = $1
         GROUP BY u.id, u.full_name, u.username, u.seq_id, u.active, p.name
         ORDER BY SUM(r.acctinputoctets) DESC NULLS LAST
@@ -103,18 +110,18 @@ const getDashboardStats = async (req, res, next) => {
       success: true,
       data: {
         counts: {
-          total_customers: parseInt(customersRes.rows[0].count),
-          active_customers: parseInt(activeCustomersRes.rows[0].count),
-          inactive_customers: parseInt(inactiveCustomersRes.rows[0].count),
-          online_customers: onlineCount,
-          offline_customers: parseInt(customersRes.rows[0].count) - onlineCount,
-          total_leads: parseInt(leadsRes.rows[0].count),
-          active_plans: parseInt(plansRes.rows[0].count),
-          total_tickets: parseInt(ticketsRes.rows[0].count),
-          open_tickets: parseInt(openTicketsRes.rows[0].count),
-          total_tasks: parseInt(tasksRes.rows[0].count),
-          pending_tasks: parseInt(pendingTasksRes.rows[0].count),
-          monthly_revenue: parseFloat(revenueRes.rows[0].monthly_revenue),
+          total_customers: parseInt(customersRes.rows[0].count) || 0,
+          active_customers: parseInt(activeCustomersRes.rows[0].count) || 0,
+          inactive_customers: parseInt(inactiveCustomersRes.rows[0].count) || 0,
+          online_customers: onlineCount || 0,
+          offline_customers: (parseInt(customersRes.rows[0].count) || 0) - (onlineCount || 0),
+          total_leads: parseInt(leadsRes.rows[0].count) || 0,
+          active_plans: parseInt(plansRes.rows[0].count) || 0,
+          total_tickets: parseInt(ticketsRes.rows[0].count) || 0,
+          open_tickets: parseInt(openTicketsRes.rows[0].count) || 0,
+          total_tasks: parseInt(tasksRes.rows[0].count) || 0,
+          pending_tasks: parseInt(pendingTasksRes.rows[0].count) || 0,
+          monthly_revenue: parseFloat(revenueRes.rows[0].monthly_revenue) || 0,
         },
         lead_breakdown: leadBreakdown,
         ticket_breakdown: ticketBreakdown,

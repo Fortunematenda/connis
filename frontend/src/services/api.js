@@ -315,8 +315,8 @@ export const plansApi = {
 // ── Dashboard API ───────────────────────────────────────────
 
 export const dashboardApi = {
-  getStats: async () => {
-    const res = await authFetch(`${API_BASE}/dashboard/stats`);
+  getStats: async (period = 'month') => {
+    const res = await authFetch(`${API_BASE}/dashboard/stats?period=${period}`);
     return handleResponse(res);
   },
 };
