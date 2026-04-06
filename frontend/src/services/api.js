@@ -172,6 +172,11 @@ export const customersApi = {
     });
     return handleResponse(res);
   },
+
+  remove: async (id) => {
+    const res = await authFetch(`${API_BASE}/customers/${id}`, { method: 'DELETE' });
+    return handleResponse(res);
+  },
 };
 
 // ── Routers API ──────────────────────────────────────────
@@ -395,6 +400,14 @@ export const documentsApi = {
   },
   remove: async (id) => {
     const res = await authFetch(`${API_BASE}/documents/${id}`, { method: 'DELETE' });
+    return handleResponse(res);
+  },
+
+  update: async (id, data) => {
+    const res = await authFetch(`${API_BASE}/documents/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
     return handleResponse(res);
   },
 };
