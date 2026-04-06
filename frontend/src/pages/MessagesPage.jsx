@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   MessageSquare, Send, Loader2, Search, ArrowLeft, User, Clock, Paperclip,
-  Phone, Mail, CalendarPlus, ExternalLink, X,
+  Phone, Mail, CalendarPlus, ExternalLink, X, Wrench, AlertTriangle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { messagesApi, tasksApi } from '../services/api';
+import { messagesApi, tasksApi, staffApi } from '../services/api';
 
 const fmtTime = (d) => d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
 const isImage = (url) => url && /\.(jpg|jpeg|png|gif|webp|heic|heif)/i.test(url);
@@ -32,6 +32,35 @@ function ChatAttachment({ url, isAdmin }) {
     </a>
   );
 }
+
+const priorityColors = { low: 'bg-gray-100 text-gray-600', medium: 'bg-blue-100 text-blue-700', high: 'bg-red-100 text-red-700' };
+
+function parseTaskCard(content) {
+  try { const obj = JSON.parse(content); if (obj._type === 'task_card') return obj; } catch {}
+  return null;
+}
+
+function TaskCardAdmin({ task }) {
+  const dateStr = task.date ? new Date(task.date).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : 'TBD';
+  return (
+    <div className="w-full max-w-[280px] bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-orange-500 px-3 py-2 flex items-center gap-2">
+        <Wrench size={13} className="text-white" />
+        <span className="text-white text-[10px] font-bold uppercase tracking-wider">Scheduled Task</span>
+      </div>
+      <div className="p-3 space-y-2">
+        <p className="text-sm font-bold text-gray-900">{task.title}</p>
+        {task.description && <p className="text-xs text-gray-600">{task.description}</p>}
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-xs text-gray-700"><Clock size={11} className="text-orange-500" /> {dateStr}</div>
+          {task.technician && <div className="flex items-center gap-2 text-xs text-gray-700"><Wrench size={11} className="text-orange-500" /> {task.technician}</div>}
+          <div className="flex items-center gap-2 text-xs"><AlertTriangle size={11} className="text-orange-500" /><span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${priorityColors[task.priority] || priorityColors.medium}`}>{task.priority?.toUpperCase()}</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const fmtRelative = (d) => {
   if (!d) return '';
   const diff = (Date.now() - new Date(d).getTime()) / 1000;
@@ -53,8 +82,9 @@ export default function MessagesPage() {
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState('');
   const [taskModal, setTaskModal] = useState(false);
-  const [taskForm, setTaskForm] = useState({ title: '', description: '', due_date: '', priority: 'medium' });
+  const [taskForm, setTaskForm] = useState({ title: '', description: '', due_date: '', priority: 'medium', assigned_to: '' });
   const [taskSaving, setTaskSaving] = useState(false);
+  const [staff, setStaff] = useState([]);
   const bottomRef = useRef(null);
   const pollRef = useRef(null);
 
@@ -83,6 +113,7 @@ export default function MessagesPage() {
 
   useEffect(() => {
     fetchConversations();
+    staffApi.getAll().then(r => setStaff(r.data || [])).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -117,20 +148,28 @@ export default function MessagesPage() {
     if (!taskForm.title.trim()) { toast.error('Task title is required'); return; }
     setTaskSaving(true);
     try {
-      const task = await tasksApi.create({
+      const techName = staff.find(s => s.id === taskForm.assigned_to)?.full_name || null;
+      await tasksApi.create({
         user_id: userId,
         title: taskForm.title,
         description: taskForm.description,
         priority: taskForm.priority,
         due_date: taskForm.due_date || null,
+        assigned_to: taskForm.assigned_to || null,
       });
-      // Send chat message to client about the scheduled task
-      const dateStr = taskForm.due_date ? new Date(taskForm.due_date).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : 'TBD';
-      const taskMsg = `📋 Task Scheduled: ${taskForm.title}\n\n${taskForm.description ? taskForm.description + '\n\n' : ''}📅 Scheduled: ${dateStr}\n⚡ Priority: ${taskForm.priority}\n\nPlease confirm your availability by replying to this message.`;
-      const msgRes = await messagesApi.send(userId, taskMsg);
+      // Send structured task card message
+      const taskCard = JSON.stringify({
+        _type: 'task_card',
+        title: taskForm.title,
+        description: taskForm.description || '',
+        date: taskForm.due_date || '',
+        priority: taskForm.priority,
+        technician: techName || '',
+      });
+      const msgRes = await messagesApi.send(userId, taskCard);
       setMessages([...messages, msgRes.data]);
       setTaskModal(false);
-      setTaskForm({ title: '', description: '', due_date: '', priority: 'medium' });
+      setTaskForm({ title: '', description: '', due_date: '', priority: 'medium', assigned_to: '' });
       toast.success('Task scheduled & client notified');
     } catch (err) { toast.error(err.message); }
     setTaskSaving(false);
@@ -256,6 +295,7 @@ export default function MessagesPage() {
                 <>
                   {messages.map((m) => {
                     const isAdmin = m.sender_type === 'admin';
+                    const taskData = parseTaskCard(m.content);
                     return (
                       <div key={m.id} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
                         <div className="max-w-[70%]">
@@ -267,6 +307,9 @@ export default function MessagesPage() {
                           {isAdmin && m.admin_name && (
                             <p className="text-[10px] text-gray-400 mb-0.5 mr-1 text-right">{m.admin_name}</p>
                           )}
+                          {taskData ? (
+                            <TaskCardAdmin task={taskData} />
+                          ) : (
                           <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
                             isAdmin
                               ? 'bg-blue-600 text-white rounded-br-md'
@@ -282,6 +325,7 @@ export default function MessagesPage() {
                             ) : null}
                             <ChatAttachment url={m.attachment_url} isAdmin={isAdmin} />
                           </div>
+                          )}
                           <p className={`text-[10px] text-gray-400 mt-0.5 ${isAdmin ? 'text-right mr-1' : 'ml-1'}`}>
                             {fmtTime(m.created_at)}
                           </p>
@@ -364,6 +408,16 @@ export default function MessagesPage() {
                     <option value="high">High</option>
                   </select>
                 </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-gray-500 mb-1 block">Assign Technician</label>
+                <select value={taskForm.assigned_to} onChange={(e) => setTaskForm({ ...taskForm, assigned_to: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-white">
+                  <option value="">— Unassigned —</option>
+                  {staff.map(s => (
+                    <option key={s.id} value={s.id}>{s.full_name} {s.role ? `(${s.role})` : ''}</option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="px-5 py-3 border-t flex justify-end gap-2">

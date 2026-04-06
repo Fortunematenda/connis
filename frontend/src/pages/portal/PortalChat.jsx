@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Send, Loader2, MessageSquare, Headphones, Paperclip, X, Image as ImageIcon } from 'lucide-react';
+import { Send, Loader2, MessageSquare, Headphones, Paperclip, X, Image as ImageIcon, CalendarPlus, Wrench, Clock, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { portalApi } from '../../services/api';
 
@@ -11,6 +11,97 @@ const fixUrl = (url) => {
   if (url.startsWith('/uploads/')) return '/api' + url;
   return url;
 };
+
+const priorityColors = {
+  low: 'bg-gray-100 text-gray-600',
+  medium: 'bg-blue-100 text-blue-700',
+  high: 'bg-red-100 text-red-700',
+};
+
+function parseTaskCard(content) {
+  try {
+    const obj = JSON.parse(content);
+    if (obj._type === 'task_card') return obj;
+  } catch { /* not JSON */ }
+  return null;
+}
+
+function generateICS(task) {
+  const date = task.date ? new Date(task.date) : new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const dtStart = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T090000`;
+  const dtEnd = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T100000`;
+  const now = new Date();
+  const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}T${pad(now.getHours())}${pad(now.getMinutes())}00`;
+  const desc = (task.description || '').replace(/\n/g, '\\n');
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//CONNIS//Task//EN',
+    'BEGIN:VEVENT',
+    `DTSTART:${dtStart}`, `DTEND:${dtEnd}`, `DTSTAMP:${stamp}Z`,
+    `UID:${Date.now()}@connis`,
+    `SUMMARY:${task.title}`,
+    `DESCRIPTION:${desc}${task.technician ? '\\nTechnician: ' + task.technician : ''}`,
+    'STATUS:CONFIRMED',
+    'END:VEVENT', 'END:VCALENDAR',
+  ].join('\r\n');
+  return ics;
+}
+
+function downloadICS(task) {
+  const ics = generateICS(task);
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${task.title.replace(/[^a-zA-Z0-9]/g, '_')}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function TaskCardBubble({ task }) {
+  const dateStr = task.date ? new Date(task.date).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : 'To be confirmed';
+  return (
+    <div className="w-full max-w-[300px] bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-orange-500 px-4 py-2.5 flex items-center gap-2">
+        <Wrench size={14} className="text-white" />
+        <span className="text-white text-xs font-bold uppercase tracking-wider">Scheduled Task</span>
+      </div>
+      <div className="p-4 space-y-3">
+        <p className="text-sm font-bold text-gray-900">{task.title}</p>
+        {task.description && <p className="text-xs text-gray-600 leading-relaxed">{task.description}</p>}
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 text-xs text-gray-700">
+            <Clock size={12} className="text-orange-500" />
+            <span className="font-medium">{dateStr}</span>
+          </div>
+          {task.technician && (
+            <div className="flex items-center gap-2 text-xs text-gray-700">
+              <Wrench size={12} className="text-orange-500" />
+              <span>Technician: <span className="font-medium">{task.technician}</span></span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 text-xs">
+            <AlertTriangle size={12} className="text-orange-500" />
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${priorityColors[task.priority] || priorityColors.medium}`}>
+              {task.priority?.toUpperCase()}
+            </span>
+          </div>
+        </div>
+        <div className="pt-2 border-t border-orange-200/60 space-y-2">
+          <p className="text-[11px] text-orange-700 font-medium">Please confirm your availability by replying to this message.</p>
+          {task.date && (
+            <button onClick={() => downloadICS(task)}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-orange-700 bg-white border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors">
+              <CalendarPlus size={13} /> Add to My Calendar
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ChatAttachment({ url, isMe }) {
   const src = fixUrl(url);
@@ -119,27 +210,32 @@ export default function PortalChat() {
           <>
             {messages.map((m) => {
               const isMe = m.sender_type === 'customer';
+              const taskData = parseTaskCard(m.content);
               return (
                 <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[75%] ${isMe ? 'order-2' : ''}`}>
+                  <div className={`max-w-[80%] ${isMe ? 'order-2' : ''}`}>
                     {!isMe && (
                       <p className="text-[10px] text-gray-400 mb-0.5 ml-1">{m.admin_name || 'Support'}</p>
                     )}
-                    <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                      isMe
-                        ? 'bg-blue-600 text-white rounded-br-md'
-                        : 'bg-gray-100 text-gray-800 rounded-bl-md'
-                    }`}>
-                      {m.ticket_id && m.content.startsWith('[Ticket]') ? (
-                        <div>
-                          <p className="text-[10px] opacity-70 mb-1 font-medium">Support Ticket</p>
-                          <p className="whitespace-pre-wrap">{m.content.replace('[Ticket] ', '')}</p>
-                        </div>
-                      ) : m.content ? (
-                        <p className="whitespace-pre-wrap">{m.content}</p>
-                      ) : null}
-                      <ChatAttachment url={m.attachment_url} isMe={isMe} />
-                    </div>
+                    {taskData ? (
+                      <TaskCardBubble task={taskData} />
+                    ) : (
+                      <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                        isMe
+                          ? 'bg-blue-600 text-white rounded-br-md'
+                          : 'bg-gray-100 text-gray-800 rounded-bl-md'
+                      }`}>
+                        {m.ticket_id && m.content.startsWith('[Ticket]') ? (
+                          <div>
+                            <p className="text-[10px] opacity-70 mb-1 font-medium">Support Ticket</p>
+                            <p className="whitespace-pre-wrap">{m.content.replace('[Ticket] ', '')}</p>
+                          </div>
+                        ) : m.content ? (
+                          <p className="whitespace-pre-wrap">{m.content}</p>
+                        ) : null}
+                        <ChatAttachment url={m.attachment_url} isMe={isMe} />
+                      </div>
+                    )}
                     <p className={`text-[10px] text-gray-400 mt-0.5 ${isMe ? 'text-right mr-1' : 'ml-1'}`}>
                       {fmtTime(m.created_at)}
                     </p>
