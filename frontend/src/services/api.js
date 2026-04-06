@@ -2,11 +2,11 @@
 // All protected routes include JWT Bearer token from localStorage
 const API_BASE = '/api';
 
-const handleResponse = async (response) => {
-  const data = await response.json();
-  if (!response.ok) {
+const handleResponse = async (res) => {
+  const data = await res.json();
+  if (!res.ok) {
     // Auto-logout on 401
-    if (response.status === 401) {
+    if (res.status === 401) {
       localStorage.removeItem('connis_token');
       localStorage.removeItem('connis_admin');
       localStorage.removeItem('connis_company');
