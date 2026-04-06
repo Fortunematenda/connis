@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Search, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { customersApi } from '../services/api';
+import { customersApi, usersApi } from '../services/api';
 
 // ── Main Customers Page ─────────────────────────────────────
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
+  const [onlineMap, setOnlineMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [perPage, setPerPage] = useState(50);
@@ -19,8 +20,11 @@ export default function CustomersPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const custRes = await customersApi.getAll();
+      const [custRes, statusRes] = await Promise.all([customersApi.getAll(), usersApi.getStatus()]);
       setCustomers(custRes.data);
+      const map = {};
+      (statusRes.data || []).forEach(u => { if (u.is_online) map[u.username] = true; });
+      setOnlineMap(map);
     } catch (err) {
       toast.error('Failed to load customers');
     } finally {
@@ -125,6 +129,7 @@ export default function CustomersPage() {
               <thead>
                 <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b bg-gray-50/50">
                   <th className="pl-4 pr-2 py-3 font-medium w-14">ID</th>
+                  <th className="px-3 py-3 font-medium w-20">Connection</th>
                   <th className="px-3 py-3 font-medium cursor-pointer" onClick={() => handleSort('full_name')}>
                     Customer <SortArrow col="full_name" />
                   </th>
@@ -153,6 +158,17 @@ export default function CustomersPage() {
                   >
                     <td className="pl-4 pr-2 py-3 text-xs font-mono text-gray-400">
                       {String(c.seq_id || 0).padStart(3, '0')}
+                    </td>
+                    <td className="px-3 py-3">
+                      {onlineMap[c.username] ? (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-700">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />Online
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-gray-400">
+                          <span className="w-2 h-2 rounded-full bg-gray-300" />Offline
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-3">
                       <div className="font-medium text-gray-900 group-hover:text-blue-700 transition-colors">
