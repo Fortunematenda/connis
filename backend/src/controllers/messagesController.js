@@ -7,6 +7,13 @@ const { createNotification } = require('./notificationsController');
 // GET /messages/conversations — list all customer conversations with last message
 const getConversations = async (req, res, next) => {
   try {
+    // Mark all customer messages as delivered when admin views conversation list
+    await pool.query(
+      `UPDATE messages SET is_delivered = TRUE
+       WHERE company_id = $1 AND sender_type = 'customer' AND is_delivered = FALSE`,
+      [req.companyId]
+    );
+
     const result = await pool.query(
       `SELECT
         u.id AS user_id, u.username, u.full_name, u.email,
@@ -29,10 +36,10 @@ const getMessages = async (req, res, next) => {
     const { userId } = req.params;
     const { limit = 50 } = req.query;
 
-    // Mark customer messages as read
+    // Mark customer messages as delivered + read
     await pool.query(
-      `UPDATE messages SET is_read = TRUE
-       WHERE user_id = $1 AND company_id = $2 AND sender_type = 'customer' AND is_read = FALSE`,
+      `UPDATE messages SET is_read = TRUE, is_delivered = TRUE
+       WHERE user_id = $1 AND company_id = $2 AND sender_type = 'customer' AND (is_read = FALSE OR is_delivered = FALSE)`,
       [userId, req.companyId]
     );
 
@@ -95,10 +102,10 @@ const getUnreadMessageCount = async (req, res, next) => {
 // GET /portal/messages — customer gets their conversation
 const getCustomerMessages = async (req, res, next) => {
   try {
-    // Mark admin messages as read
+    // Mark admin messages as delivered + read
     await pool.query(
-      `UPDATE messages SET is_read = TRUE
-       WHERE user_id = $1 AND company_id = $2 AND sender_type = 'admin' AND is_read = FALSE`,
+      `UPDATE messages SET is_read = TRUE, is_delivered = TRUE
+       WHERE user_id = $1 AND company_id = $2 AND sender_type = 'admin' AND (is_read = FALSE OR is_delivered = FALSE)`,
       [req.userId, req.companyId]
     );
 

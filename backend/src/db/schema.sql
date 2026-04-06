@@ -78,6 +78,7 @@ ALTER TABLE leads ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES company_ad
 ALTER TABLE plans ADD COLUMN IF NOT EXISTS billing_type VARCHAR(20) DEFAULT 'postpaid';
 ALTER TABLE ticket_comments ADD COLUMN IF NOT EXISTS is_customer BOOLEAN DEFAULT FALSE;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_url VARCHAR(500);
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_delivered BOOLEAN DEFAULT FALSE;
 
 -- ============================================================
 -- 11. TRANSACTIONS — balance credits / debits per customer

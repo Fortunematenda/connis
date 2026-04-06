@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Send, Loader2, MessageSquare, Headphones, Paperclip, X, Image as ImageIcon, CalendarPlus, Wrench, Clock, AlertTriangle } from 'lucide-react';
+import { Send, Loader2, MessageSquare, Headphones, Paperclip, X, Image as ImageIcon, CalendarPlus, Wrench, Clock, AlertTriangle, Check, CheckCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { portalApi } from '../../services/api';
 
@@ -236,9 +236,16 @@ export default function PortalChat() {
                         <ChatAttachment url={m.attachment_url} isMe={isMe} />
                       </div>
                     )}
-                    <p className={`text-[10px] text-gray-400 mt-0.5 ${isMe ? 'text-right mr-1' : 'ml-1'}`}>
-                      {fmtTime(m.created_at)}
-                    </p>
+                    <div className={`flex items-center gap-1 mt-0.5 ${isMe ? 'justify-end mr-1' : 'ml-1'}`}>
+                      <span className="text-[10px] text-gray-400">{fmtTime(m.created_at)}</span>
+                      {isMe && (
+                        m.is_read
+                          ? <CheckCheck size={14} className="text-blue-500" />
+                          : m.is_delivered
+                            ? <CheckCheck size={14} className="text-gray-400" />
+                            : <Check size={14} className="text-gray-400" />
+                      )}
+                    </div>
                   </div>
                 </div>
               );

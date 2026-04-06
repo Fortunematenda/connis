@@ -59,7 +59,7 @@ export default function PortalStatistics() {
   const daily = stats?.daily_usage || [];
 
   // Find max daily download for bar chart scaling
-  const maxDaily = Math.max(...daily.map(d => Number(d.download)), 1);
+  const maxDaily = Math.max(...daily.map(d => Number(d.download || 0)), 1);
 
   return (
     <div className="space-y-5">
@@ -144,86 +144,124 @@ export default function PortalStatistics() {
       </div>
 
       {/* Daily Usage Chart (last 30 days) */}
-      {daily.length > 0 && (
-        <div className="bg-white rounded-xl border p-5">
-          <h3 className="text-sm font-semibold text-gray-800 mb-4">Daily Usage (Last 30 Days)</h3>
-          <div className="flex items-end gap-1 h-32">
-            {daily.map((d, i) => {
-              const pct = Math.max((Number(d.download) / maxDaily) * 100, 2);
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center group relative">
-                  <div className="absolute bottom-full mb-1 hidden group-hover:block bg-gray-900 text-white text-[10px] rounded px-2 py-1 whitespace-nowrap z-10">
-                    {fmtDate(d.day)}: {formatBytes(d.download)} down / {formatBytes(d.upload)} up
+      <div className="bg-white rounded-xl border p-4 sm:p-5">
+        <h3 className="text-sm font-semibold text-gray-800 mb-4">Daily Usage (Last 30 Days)</h3>
+        {daily.length > 0 ? (
+          <>
+            <div className="flex items-end gap-[2px] sm:gap-1 h-32 sm:h-40">
+              {daily.map((d, i) => {
+                const dl = Number(d.download || 0);
+                const ul = Number(d.upload || 0);
+                const pct = Math.max((dl / maxDaily) * 100, 3);
+                return (
+                  <div key={i} className="flex-1 flex flex-col items-center group relative">
+                    <div className="absolute bottom-full mb-1 hidden group-hover:block bg-gray-900 text-white text-[10px] rounded px-2 py-1 whitespace-nowrap z-10 pointer-events-none">
+                      {fmtDate(d.day)}: {formatBytes(dl)} ↓ / {formatBytes(ul)} ↑
+                    </div>
+                    <div
+                      className="w-full bg-blue-500 rounded-t-sm hover:bg-blue-600 transition-colors cursor-pointer"
+                      style={{ height: `${pct}%`, minHeight: '3px' }}
+                    />
                   </div>
-                  <div
-                    className="w-full bg-blue-500 rounded-t-sm hover:bg-blue-600 transition-colors cursor-pointer min-h-[2px]"
-                    style={{ height: `${pct}%` }}
-                  />
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+            <div className="flex justify-between mt-2 text-[10px] text-gray-400">
+              <span>{fmtDate(daily[0].day)}</span>
+              <span>{fmtDate(daily[daily.length - 1].day)}</span>
+            </div>
+            <div className="flex items-center gap-4 mt-3 text-[11px] text-gray-400">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-blue-500" /> Download</span>
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-8">
+            <BarChart3 size={28} className="text-gray-200 mx-auto mb-3" />
+            <p className="text-sm text-gray-400">No usage data yet</p>
+            <p className="text-xs text-gray-300 mt-1">Data will appear once you start using your connection</p>
           </div>
-          <div className="flex justify-between mt-2 text-[10px] text-gray-400">
-            <span>{daily.length > 0 ? fmtDate(daily[0].day) : ''}</span>
-            <span>{daily.length > 0 ? fmtDate(daily[daily.length - 1].day) : ''}</span>
-          </div>
-          <div className="flex items-center gap-4 mt-3 text-[11px] text-gray-400">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-blue-500" /> Download</span>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Recent Sessions */}
       <div className="bg-white rounded-xl border overflow-hidden">
-        <div className="px-5 py-3 border-b">
+        <div className="px-4 sm:px-5 py-3 border-b">
           <h3 className="text-sm font-semibold text-gray-800">Recent Sessions</h3>
         </div>
         {sessions.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[11px] text-gray-400 uppercase tracking-wider bg-gray-50/50 border-b">
-                  <th className="px-5 py-2.5 font-medium">Started</th>
-                  <th className="px-5 py-2.5 font-medium">Duration</th>
-                  <th className="px-5 py-2.5 font-medium">IP Address</th>
-                  <th className="px-5 py-2.5 font-medium">Download</th>
-                  <th className="px-5 py-2.5 font-medium">Upload</th>
-                  <th className="px-5 py-2.5 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {sessions.map((s) => (
-                  <tr key={s.id} className="hover:bg-gray-50/50">
-                    <td className="px-5 py-3 text-gray-700">{fmtDateTime(s.start_time)}</td>
-                    <td className="px-5 py-3">
-                      <span className="flex items-center gap-1 text-gray-600">
-                        <Clock size={12} className="text-gray-400" /> {fmtDuration(s.start_time, s.stop_time)}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3">
-                      {s.framed_ip ? (
-                        <span className="flex items-center gap-1 text-gray-600">
-                          <Globe size={12} className="text-gray-400" />
-                          <span className="font-mono text-xs">{s.framed_ip}</span>
-                        </span>
-                      ) : <span className="text-gray-300">—</span>}
-                    </td>
-                    <td className="px-5 py-3 font-medium text-green-600">{formatBytes(s.download_bytes)}</td>
-                    <td className="px-5 py-3 font-medium text-blue-600">{formatBytes(s.upload_bytes)}</td>
-                    <td className="px-5 py-3">
-                      {!s.stop_time ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200/60 px-2 py-0.5 rounded-full">
-                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" /> Active
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-gray-400">{s.terminate_cause || 'Closed'}</span>
-                      )}
-                    </td>
+          <>
+            {/* Desktop table */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] text-gray-400 uppercase tracking-wider bg-gray-50/50 border-b">
+                    <th className="px-5 py-2.5 font-medium">Started</th>
+                    <th className="px-5 py-2.5 font-medium">Duration</th>
+                    <th className="px-5 py-2.5 font-medium">IP Address</th>
+                    <th className="px-5 py-2.5 font-medium">Download</th>
+                    <th className="px-5 py-2.5 font-medium">Upload</th>
+                    <th className="px-5 py-2.5 font-medium">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y">
+                  {sessions.map((s) => (
+                    <tr key={s.id} className="hover:bg-gray-50/50">
+                      <td className="px-5 py-3 text-gray-700">{fmtDateTime(s.start_time)}</td>
+                      <td className="px-5 py-3">
+                        <span className="flex items-center gap-1 text-gray-600">
+                          <Clock size={12} className="text-gray-400" /> {fmtDuration(s.start_time, s.stop_time)}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        {s.framed_ip ? (
+                          <span className="flex items-center gap-1 text-gray-600">
+                            <Globe size={12} className="text-gray-400" />
+                            <span className="font-mono text-xs">{s.framed_ip}</span>
+                          </span>
+                        ) : <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="px-5 py-3 font-medium text-green-600">{formatBytes(s.download_bytes)}</td>
+                      <td className="px-5 py-3 font-medium text-blue-600">{formatBytes(s.upload_bytes)}</td>
+                      <td className="px-5 py-3">
+                        {!s.stop_time ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200/60 px-2 py-0.5 rounded-full">
+                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" /> Active
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-gray-400">{s.terminate_cause || 'Closed'}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Mobile cards */}
+            <div className="sm:hidden divide-y">
+              {sessions.map((s) => (
+                <div key={s.id} className="px-4 py-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700">{fmtDateTime(s.start_time)}</span>
+                    {!s.stop_time ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200/60 px-2 py-0.5 rounded-full">
+                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" /> Active
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-gray-400">{s.terminate_cause || 'Closed'}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <span className="flex items-center gap-1"><Clock size={11} className="text-gray-400" /> {fmtDuration(s.start_time, s.stop_time)}</span>
+                    {s.framed_ip && <span className="font-mono">{s.framed_ip}</span>}
+                  </div>
+                  <div className="flex items-center gap-4 text-xs">
+                    <span className="flex items-center gap-1"><ArrowDown size={11} className="text-green-500" /> <span className="font-medium text-green-600">{formatBytes(s.download_bytes)}</span></span>
+                    <span className="flex items-center gap-1"><ArrowUp size={11} className="text-blue-500" /> <span className="font-medium text-blue-600">{formatBytes(s.upload_bytes)}</span></span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         ) : (
           <div className="px-5 py-12 text-center">
             <BarChart3 size={28} className="text-gray-200 mx-auto mb-3" />

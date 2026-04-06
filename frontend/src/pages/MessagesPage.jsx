@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   MessageSquare, Send, Loader2, Search, ArrowLeft, User, Clock, Paperclip,
   Phone, Mail, CalendarPlus, ExternalLink, X, Wrench, AlertTriangle, Reply,
-  Check, Pencil,
+  Check, CheckCheck, Pencil,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { messagesApi, tasksApi, staffApi } from '../services/api';
@@ -472,9 +472,16 @@ export default function MessagesPage() {
                             <ChatAttachment url={m.attachment_url} isAdmin={isAdmin} />
                           </div>
                           )}
-                          <p className={`text-[10px] text-gray-400 mt-0.5 ${isAdmin ? 'text-right mr-1' : 'ml-1'}`}>
-                            {fmtTime(m.created_at)}
-                          </p>
+                          <div className={`flex items-center gap-1 mt-0.5 ${isAdmin ? 'justify-end mr-1' : 'ml-1'}`}>
+                            <span className="text-[10px] text-gray-400">{fmtTime(m.created_at)}</span>
+                            {isAdmin && (
+                              m.is_read
+                                ? <CheckCheck size={14} className="text-blue-500" />
+                                : m.is_delivered
+                                  ? <CheckCheck size={14} className="text-gray-400" />
+                                  : <Check size={14} className="text-gray-400" />
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
