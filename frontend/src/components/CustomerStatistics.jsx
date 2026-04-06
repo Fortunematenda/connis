@@ -94,7 +94,8 @@ export default function CustomerStatistics({ customerId }) {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const usageMap = {};
     (stats.daily_usage || []).forEach(d => {
-      const key = new Date(d.date).toISOString().split('T')[0];
+      // Use date string directly from backend - don't convert to UTC
+      const key = d.date;
       usageMap[key] = d;
     });
 
