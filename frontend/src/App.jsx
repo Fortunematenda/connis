@@ -12,6 +12,9 @@ import TicketsPage from './pages/TicketsPage';
 import TasksPage from './pages/TasksPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import VouchersPage from './pages/VouchersPage';
+import PortalLogin from './pages/portal/PortalLogin';
+import PortalDashboard from './pages/portal/PortalDashboard';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -40,8 +43,12 @@ export default function App() {
         <Route path="/tickets/:id" element={<TicketsPage />} />
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/plans" element={<PlansPage />} />
+        <Route path="/vouchers" element={<VouchersPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
+      {/* Customer Portal — separate from admin */}
+      <Route path="/portal/login" element={<PortalLogin />} />
+      <Route path="/portal" element={<PortalDashboard />} />
     </Routes>
   );
 }

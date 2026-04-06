@@ -19,6 +19,9 @@ const ticketsRoutes = require('./routes/tickets');
 const tasksRoutes = require('./routes/tasks');
 const documentsRoutes = require('./routes/documents');
 const dashboardRoutes = require('./routes/dashboard');
+const vouchersRoutes = require('./routes/vouchers');
+const transactionsRoutes = require('./routes/transactions');
+const portalRoutes = require('./routes/portal');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -37,6 +40,7 @@ app.get('/api/health', (req, res) => {
 
 // ── Public Routes (no auth required) ───────────────────────
 app.use('/api/auth', authRoutes);
+app.use('/api/portal', portalRoutes);
 
 // ── Protected Routes (JWT + active subscription) ───────────
 const protect = [authenticate, requireActiveSubscription];
@@ -52,6 +56,8 @@ app.use('/api/tickets', protect, ticketsRoutes);
 app.use('/api/tasks', protect, tasksRoutes);
 app.use('/api/documents', protect, documentsRoutes);
 app.use('/api/dashboard', protect, dashboardRoutes);
+app.use('/api/vouchers', protect, vouchersRoutes);
+app.use('/api/transactions', protect, transactionsRoutes);
 
 // ── 404 handler ────────────────────────────────────────────
 app.use((req, res) => {
@@ -62,6 +68,8 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // ── Start server ───────────────────────────────────────────
+const { runDailyDeductions } = require('./services/billingService');
+
 const start = async () => {
   try {
     // Initialize database schema on startup
@@ -71,6 +79,15 @@ const start = async () => {
       console.log(`[SERVER] CONNIS backend running on http://localhost:${PORT}`);
       console.log(`[SERVER] Environment: ${process.env.NODE_ENV || 'development'}`);
     });
+
+    // Run daily billing deductions every 24 hours (at startup + interval)
+    const BILLING_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+    setTimeout(() => {
+      runDailyDeductions().catch(err => console.error('[CRON] Billing error:', err.message));
+      setInterval(() => {
+        runDailyDeductions().catch(err => console.error('[CRON] Billing error:', err.message));
+      }, BILLING_INTERVAL);
+    }, 60000); // Wait 1 min after startup before first run
   } catch (err) {
     console.error('[SERVER] Failed to start:', err.message);
     process.exit(1);

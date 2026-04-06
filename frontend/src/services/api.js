@@ -411,3 +411,103 @@ export const documentsApi = {
     return handleResponse(res);
   },
 };
+
+// ── Vouchers API (admin) ──────────────────────────────────────
+
+export const vouchersApi = {
+  getAll: async (used) => {
+    const qs = used !== undefined ? `?used=${used}` : '';
+    const res = await authFetch(`${API_BASE}/vouchers${qs}`);
+    return handleResponse(res);
+  },
+  generate: async (amount, count = 1) => {
+    const res = await authFetch(`${API_BASE}/vouchers/generate`, {
+      method: 'POST', body: JSON.stringify({ amount, count }),
+    });
+    return handleResponse(res);
+  },
+  redeem: async (code, user_id) => {
+    const res = await authFetch(`${API_BASE}/vouchers/redeem`, {
+      method: 'POST', body: JSON.stringify({ code, user_id }),
+    });
+    return handleResponse(res);
+  },
+  remove: async (id) => {
+    const res = await authFetch(`${API_BASE}/vouchers/${id}`, { method: 'DELETE' });
+    return handleResponse(res);
+  },
+};
+
+// ── Transactions API (admin) ──────────────────────────────────
+
+export const transactionsApi = {
+  getAll: async (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    const res = await authFetch(`${API_BASE}/transactions${qs ? '?' + qs : ''}`);
+    return handleResponse(res);
+  },
+  credit: async (user_id, amount, description) => {
+    const res = await authFetch(`${API_BASE}/transactions/credit`, {
+      method: 'POST', body: JSON.stringify({ user_id, amount, description }),
+    });
+    return handleResponse(res);
+  },
+  debit: async (user_id, amount, description) => {
+    const res = await authFetch(`${API_BASE}/transactions/debit`, {
+      method: 'POST', body: JSON.stringify({ user_id, amount, description }),
+    });
+    return handleResponse(res);
+  },
+};
+
+// ── Portal API (customer self-service) ────────────────────────
+
+const portalFetch = (url, options = {}) => {
+  const token = localStorage.getItem('connis_portal_token');
+  return fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...options.headers,
+    },
+  });
+};
+
+const handlePortalResponse = async (response) => {
+  const data = await response.json();
+  if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('connis_portal_token');
+      localStorage.removeItem('connis_portal_user');
+      window.location.href = '/portal/login';
+    }
+    throw new Error(data.error || 'Request failed');
+  }
+  return data;
+};
+
+export const portalApi = {
+  login: async (username, password) => {
+    const res = await fetch(`${API_BASE}/portal/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    return handlePortalResponse(res);
+  },
+  getMe: async () => {
+    const res = await portalFetch(`${API_BASE}/portal/me`);
+    return handlePortalResponse(res);
+  },
+  getTransactions: async (limit = 50, offset = 0) => {
+    const res = await portalFetch(`${API_BASE}/portal/transactions?limit=${limit}&offset=${offset}`);
+    return handlePortalResponse(res);
+  },
+  redeemVoucher: async (code) => {
+    const res = await portalFetch(`${API_BASE}/portal/redeem`, {
+      method: 'POST', body: JSON.stringify({ code }),
+    });
+    return handlePortalResponse(res);
+  },
+};

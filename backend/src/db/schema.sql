@@ -74,6 +74,43 @@ ALTER TABLE sessions ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES compani
 ALTER TABLE company_admins ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
 ALTER TABLE documents ADD COLUMN IF NOT EXISTS description TEXT;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES company_admins(id) ON DELETE SET NULL;
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS billing_type VARCHAR(20) DEFAULT 'postpaid';
+
+-- ============================================================
+-- 11. TRANSACTIONS — balance credits / debits per customer
+-- ============================================================
+CREATE TABLE IF NOT EXISTS transactions (
+  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  company_id    UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  amount        NUMERIC(12, 2) NOT NULL,
+  type          VARCHAR(10) NOT NULL CHECK (type IN ('credit', 'debit')),
+  description   TEXT,
+  created_by    UUID REFERENCES company_admins(id) ON DELETE SET NULL,
+  created_at    TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_user ON transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_company ON transactions(company_id);
+
+-- ============================================================
+-- 12. VOUCHERS — prepaid voucher codes per company
+-- ============================================================
+CREATE TABLE IF NOT EXISTS vouchers (
+  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  company_id    UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  code          VARCHAR(20) NOT NULL,
+  amount        NUMERIC(12, 2) NOT NULL,
+  is_used       BOOLEAN DEFAULT FALSE,
+  used_by       UUID REFERENCES users(id) ON DELETE SET NULL,
+  used_at       TIMESTAMP,
+  created_by    UUID REFERENCES company_admins(id) ON DELETE SET NULL,
+  created_at    TIMESTAMP DEFAULT NOW(),
+  UNIQUE(company_id, code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_vouchers_company ON vouchers(company_id);
+CREATE INDEX IF NOT EXISTS idx_vouchers_code ON vouchers(code);
 
 -- ============================================================
 -- 1. USERS — ISP subscribers / customers (per company)
