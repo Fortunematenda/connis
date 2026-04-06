@@ -25,11 +25,26 @@ const backgroundSync = async (companyId) => {
       return;
     }
 
-    // 2. Get existing CONNIS customers
+    // 2. Get unique RADIUS groups (plans) and auto-create them in CONNIS if missing
+    const radiusGroups = [...new Set(radiusUsers.rows.map(r => r.groupname).filter(g => g && !EXCLUDED_PROFILES.includes(g.toLowerCase())))];
+    for (const group of radiusGroups) {
+      const existingPlan = await pool.query('SELECT id FROM plans WHERE company_id = $1 AND (name = $2 OR mikrotik_profile = $2)', [companyId, group]);
+      if (existingPlan.rows.length === 0) {
+        // Create plan from RADIUS group (default values, user can edit later)
+        await pool.query(
+          `INSERT INTO plans (company_id, name, mikrotik_profile, download_speed, upload_speed, price, description)
+           VALUES ($1, $2, $2, '10M', '5M', 100.00, 'Auto-imported from RADIUS')`,
+          [companyId, group]
+        );
+        console.log(`[SYNC] Created plan from RADIUS group: ${group}`);
+      }
+    }
+
+    // 3. Get existing CONNIS customers
     const existingRes = await pool.query('SELECT username FROM users WHERE company_id = $1', [companyId]);
     const existing = new Set(existingRes.rows.map(r => r.username));
 
-    // 3. Get plans to match RADIUS groups
+    // 4. Get plans to match RADIUS groups
     const plansRes = await pool.query('SELECT id, name, mikrotik_profile FROM plans WHERE company_id = $1', [companyId]);
     const profileToPlan = {};
     plansRes.rows.forEach(p => {
