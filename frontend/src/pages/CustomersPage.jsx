@@ -124,7 +124,9 @@ export default function CustomersPage() {
             {customers.length === 0 ? 'No customers yet. Convert a lead to get started.' : 'No results found.'}
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b bg-gray-50/50">
@@ -153,9 +155,9 @@ export default function CustomersPage() {
                   const isOnline = onlineMap[c.username];
                   const isBlocked = !c.active;
                   const rowStyle = isBlocked
-                    ? { backgroundColor: '#eb3b2f10' } // 10 = ~6% opacity
+                    ? { backgroundColor: '#eb3b2f10' }
                     : isOnline
-                      ? { backgroundColor: '#8ad19030' } // 30 = ~19% opacity
+                      ? { backgroundColor: '#8ad19030' }
                       : {};
                   const rowHoverClass = isBlocked
                     ? 'hover:bg-red-100'
@@ -219,6 +221,50 @@ export default function CustomersPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile: Splynx-style compact table */}
+          <div className="md:hidden">
+            {/* Column headers */}
+            <div className="flex items-center px-3 py-2.5 border-b bg-gray-50/80 text-[11px] text-blue-600 font-medium uppercase tracking-wider">
+              <span className="w-7" />
+              <span className="w-[72px] cursor-pointer" onClick={() => handleSort('active')}>Status <SortArrow col="active" /></span>
+              <span className="w-14 cursor-pointer" onClick={() => handleSort('seq_id')}>ID <SortArrow col="seq_id" /></span>
+              <span className="flex-1 cursor-pointer" onClick={() => handleSort('full_name')}>Full name <SortArrow col="full_name" /></span>
+            </div>
+            {/* Rows */}
+            <div className="divide-y">
+              {paginated.map((c) => {
+                const isOnline = onlineMap[c.username];
+                const isBlocked = !c.active;
+                const rowBg = isBlocked
+                  ? 'bg-red-50/50'
+                  : isOnline
+                    ? 'bg-emerald-50/60'
+                    : '';
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => navigate(`/customers/${c.id}`)}
+                    className={`w-full flex items-center px-3 py-3 text-left active:bg-gray-100 transition-colors ${rowBg}`}
+                  >
+                    <span className="w-7 text-gray-300 shrink-0">›</span>
+                    <span className="w-[72px] shrink-0">
+                      {isBlocked ? (
+                        <span className="inline-block text-[10px] font-bold text-white bg-red-500 rounded px-1.5 py-0.5 leading-tight">Blocked</span>
+                      ) : isOnline ? (
+                        <span className="inline-block text-[10px] font-bold text-white bg-emerald-500 rounded px-1.5 py-0.5 leading-tight">Online</span>
+                      ) : (
+                        <span className="inline-block text-[10px] font-bold text-gray-500 bg-gray-200 rounded px-1.5 py-0.5 leading-tight">Offline</span>
+                      )}
+                    </span>
+                    <span className="w-14 text-sm text-blue-600 font-medium shrink-0">{c.seq_id || 0}</span>
+                    <span className="flex-1 text-sm text-gray-800 font-medium truncate">{c.full_name || c.username}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          </>
         )}
 
         {/* Pagination */}
