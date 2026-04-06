@@ -3,6 +3,7 @@ const { ApiError } = require('../middleware/errorHandler');
 const mikrotik = require('../services/mikrotik');
 const { getRouterConfigForCompany } = require('../services/routerResolver');
 const { getStrategy } = require('../services/authStrategy');
+const { generateConversionInvoice } = require('../services/invoiceService');
 
 // Valid pipeline stages
 const VALID_STATUSES = ['new', 'contacted', 'site_survey', 'quoted', 'install_pending', 'converted', 'lost'];
@@ -249,13 +250,26 @@ const convertLead = async (req, res, next) => {
       [newUser.id, plan_id]
     );
 
-    // ── Step 5: Update lead status ──
+    // ── Step 5: Generate first invoice ──
+    try {
+      await generateConversionInvoice(client, {
+        companyId,
+        userId: newUser.id,
+        planName: plan.name,
+        planPrice: parseFloat(plan.price),
+        createdBy: req.adminId || null,
+      });
+    } catch (invErr) {
+      console.warn(`[CONVERT] Invoice generation failed: ${invErr.message}`);
+    }
+
+    // ── Step 6: Update lead status ──
     await client.query(
       `UPDATE leads SET status = 'converted', converted_to = $1, updated_at = NOW() WHERE id = $2`,
       [newUser.id, id]
     );
 
-    // ── Step 6: Add system comment ──
+    // ── Step 7: Add system comment ──
     const syncNote = routerSyncResult.synced
       ? `${authType.toUpperCase()}: ${routerSyncResult.note || routerSyncResult.profile || 'synced'}`
       : `${authType.toUpperCase()}: NOT synced — ${routerSyncResult.error || 'router unreachable'}`;

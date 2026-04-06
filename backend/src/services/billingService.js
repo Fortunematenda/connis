@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const { getRouterConfigForCompany } = require('./routerResolver');
 const { getStrategy } = require('./authStrategy');
+const { recordTransaction, getComputedBalance } = require('./transactionHelper');
 
 // Daily deduction for prepaid users — deducts (plan price / 30) per day
 const runDailyDeductions = async () => {
@@ -27,25 +28,21 @@ const runDailyDeductions = async () => {
       try {
         await client.query('BEGIN');
 
-        // Deduct daily cost
-        await client.query(
-          'UPDATE users SET balance = balance - $1, updated_at = NOW() WHERE id = $2',
-          [dailyCost.toFixed(2), row.user_id]
-        );
-
-        // Record transaction
-        await client.query(
-          `INSERT INTO transactions (company_id, user_id, amount, type, description)
-           VALUES ($1, $2, $3, 'debit', $4)`,
-          [row.company_id, row.user_id, dailyCost.toFixed(2), `Daily charge: ${row.plan_name}`]
-        );
+        // Record debit transaction (also syncs cached balance)
+        await recordTransaction(client, {
+          companyId: row.company_id,
+          userId: row.user_id,
+          amount: dailyCost.toFixed(2),
+          type: 'debit',
+          category: 'subscription',
+          description: `Daily charge: ${row.plan_name}`,
+        });
 
         await client.query('COMMIT');
         deducted++;
 
         // Check if balance is now <= 0 — suspend user
-        const balRes = await pool.query('SELECT balance FROM users WHERE id = $1', [row.user_id]);
-        const newBalance = parseFloat(balRes.rows[0].balance);
+        const newBalance = await getComputedBalance(row.user_id);
 
         if (newBalance <= 0) {
           await suspendUser(row.user_id, row.username, row.company_id);
@@ -103,13 +100,14 @@ const reactivateUser = async (userId, username, companyId) => {
 const checkAndReactivate = async (userId) => {
   try {
     const userRes = await pool.query(
-      'SELECT id, username, company_id, balance, active FROM users WHERE id = $1',
+      'SELECT id, username, company_id, active FROM users WHERE id = $1',
       [userId]
     );
     if (userRes.rows.length === 0) return;
     const user = userRes.rows[0];
 
-    if (!user.active && parseFloat(user.balance) > 0) {
+    const balance = await getComputedBalance(userId);
+    if (!user.active && balance > 0) {
       await reactivateUser(user.id, user.username, user.company_id);
     }
   } catch (err) {

@@ -3,6 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, UserCheck, Ticket, MessageSquare, MoreHorizontal,
   Target, CheckSquare, Wifi, TicketCheck, Shield, Globe, Settings, X,
+  Receipt, FileText, ClipboardList, RotateCcw, Package,
 } from 'lucide-react';
 import { messagesApi, notificationsApi } from '../services/api';
 
@@ -26,6 +27,16 @@ const moreSections = [
     items: [
       { to: '/plans', icon: Wifi, label: 'Plans', color: 'bg-blue-50 text-blue-600' },
       { to: '/vouchers', icon: TicketCheck, label: 'Vouchers', color: 'bg-emerald-50 text-emerald-600' },
+    ],
+  },
+  {
+    title: 'Accounting',
+    items: [
+      { to: '/accounting/transactions', icon: Receipt, label: 'Transactions', color: 'bg-indigo-50 text-indigo-600' },
+      { to: '/accounting/invoices', icon: FileText, label: 'Invoices', color: 'bg-pink-50 text-pink-600' },
+      { to: '/accounting/quotes', icon: ClipboardList, label: 'Quotes', color: 'bg-violet-50 text-violet-600' },
+      { to: '/accounting/credits', icon: RotateCcw, label: 'Credits', color: 'bg-teal-50 text-teal-600' },
+      { to: '/accounting/items', icon: Package, label: 'Items', color: 'bg-amber-50 text-amber-600' },
     ],
   },
   {

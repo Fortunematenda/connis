@@ -79,6 +79,8 @@ ALTER TABLE plans ADD COLUMN IF NOT EXISTS billing_type VARCHAR(20) DEFAULT 'pos
 ALTER TABLE ticket_comments ADD COLUMN IF NOT EXISTS is_customer BOOLEAN DEFAULT FALSE;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_url VARCHAR(500);
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_delivered BOOLEAN DEFAULT FALSE;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS category VARCHAR(30) DEFAULT 'manual';
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS reference VARCHAR(200);
 
 -- ============================================================
 -- 11. TRANSACTIONS — balance credits / debits per customer
@@ -89,7 +91,9 @@ CREATE TABLE IF NOT EXISTS transactions (
   user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   amount        NUMERIC(12, 2) NOT NULL,
   type          VARCHAR(10) NOT NULL CHECK (type IN ('credit', 'debit')),
+  category      VARCHAR(30) DEFAULT 'manual',  -- manual, voucher, payment, subscription, adjustment, refund
   description   TEXT,
+  reference     VARCHAR(200),                  -- external ref (voucher code, payment ref, invoice #)
   created_by    UUID REFERENCES company_admins(id) ON DELETE SET NULL,
   created_at    TIMESTAMP DEFAULT NOW()
 );
@@ -364,3 +368,155 @@ ALTER TABLE documents ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW(
 
 CREATE INDEX IF NOT EXISTS idx_documents_company ON documents(company_id);
 CREATE INDEX IF NOT EXISTS idx_documents_user ON documents(user_id);
+
+-- ============================================================
+-- 15. INVOICES — customer invoices (auto + manual)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS invoices (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  company_id      UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  invoice_number  VARCHAR(50) NOT NULL,
+  status          VARCHAR(20) DEFAULT 'paid',        -- draft, issued, paid, cancelled, overdue
+  type            VARCHAR(30) DEFAULT 'subscription', -- subscription, once_off, credit_note, proforma
+  subtotal        NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  tax             NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  total           NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  amount_paid     NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  currency        VARCHAR(10) DEFAULT 'ZAR',
+  notes           TEXT,
+  due_date        DATE,
+  paid_at         TIMESTAMP,
+  period_start    DATE,                              -- billing period start
+  period_end      DATE,                              -- billing period end
+  transaction_id  UUID REFERENCES transactions(id) ON DELETE SET NULL,
+  created_by      UUID REFERENCES company_admins(id) ON DELETE SET NULL,
+  created_at      TIMESTAMP DEFAULT NOW(),
+  updated_at      TIMESTAMP DEFAULT NOW(),
+  UNIQUE(company_id, invoice_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoices_company ON invoices(company_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_user ON invoices(user_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+
+-- ============================================================
+-- 15b. INVOICE_ITEMS — line items on an invoice
+-- ============================================================
+CREATE TABLE IF NOT EXISTS invoice_items (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  invoice_id      UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+  description     TEXT NOT NULL,
+  quantity         NUMERIC(10, 2) NOT NULL DEFAULT 1,
+  unit_price      NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  total           NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  created_at      TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id);
+
+-- ============================================================
+-- 16. BILLABLE_ITEMS — reusable service/product items for invoices & quotes
+-- ============================================================
+CREATE TABLE IF NOT EXISTS billable_items (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  company_id      UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  name            VARCHAR(200) NOT NULL,
+  description     TEXT,
+  price           NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  type            VARCHAR(30) DEFAULT 'service',      -- service, product, once_off, recurring
+  taxable         BOOLEAN DEFAULT FALSE,
+  active          BOOLEAN DEFAULT TRUE,
+  plan_id         UUID REFERENCES plans(id) ON DELETE SET NULL,
+  created_at      TIMESTAMP DEFAULT NOW(),
+  updated_at      TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_billable_items_company ON billable_items(company_id);
+
+-- ============================================================
+-- 17. QUOTES — proforma quotes for customers
+-- ============================================================
+CREATE TABLE IF NOT EXISTS quotes (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  company_id      UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  user_id         UUID REFERENCES users(id) ON DELETE SET NULL,
+  quote_number    VARCHAR(50) NOT NULL,
+  status          VARCHAR(20) DEFAULT 'draft',        -- draft, sent, accepted, rejected, expired, converted
+  subtotal        NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  tax             NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  total           NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  currency        VARCHAR(10) DEFAULT 'ZAR',
+  notes           TEXT,
+  valid_until     DATE,
+  customer_name   VARCHAR(200),                       -- for quotes to non-customers (leads)
+  customer_email  VARCHAR(200),
+  customer_phone  VARCHAR(50),
+  customer_address TEXT,
+  converted_to    UUID REFERENCES invoices(id) ON DELETE SET NULL,
+  lead_id         UUID REFERENCES leads(id) ON DELETE SET NULL,
+  created_by      UUID REFERENCES company_admins(id) ON DELETE SET NULL,
+  created_at      TIMESTAMP DEFAULT NOW(),
+  updated_at      TIMESTAMP DEFAULT NOW(),
+  UNIQUE(company_id, quote_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_quotes_company ON quotes(company_id);
+CREATE INDEX IF NOT EXISTS idx_quotes_user ON quotes(user_id);
+CREATE INDEX IF NOT EXISTS idx_quotes_status ON quotes(status);
+
+-- ============================================================
+-- 16b. QUOTE_ITEMS — line items on a quote
+-- ============================================================
+CREATE TABLE IF NOT EXISTS quote_items (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  quote_id        UUID NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+  item_id         UUID REFERENCES billable_items(id) ON DELETE SET NULL,
+  description     TEXT NOT NULL,
+  quantity        NUMERIC(10, 2) NOT NULL DEFAULT 1,
+  unit_price      NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  total           NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  created_at      TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_quote_items_quote ON quote_items(quote_id);
+
+-- ============================================================
+-- 17. CREDIT_NOTES — credit notes / refunds
+-- ============================================================
+CREATE TABLE IF NOT EXISTS credit_notes (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  company_id      UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  credit_number   VARCHAR(50) NOT NULL,
+  status          VARCHAR(20) DEFAULT 'issued',       -- draft, issued, applied, cancelled
+  subtotal        NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  tax             NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  total           NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  currency        VARCHAR(10) DEFAULT 'ZAR',
+  notes           TEXT,
+  invoice_id      UUID REFERENCES invoices(id) ON DELETE SET NULL,
+  transaction_id  UUID REFERENCES transactions(id) ON DELETE SET NULL,
+  created_by      UUID REFERENCES company_admins(id) ON DELETE SET NULL,
+  created_at      TIMESTAMP DEFAULT NOW(),
+  updated_at      TIMESTAMP DEFAULT NOW(),
+  UNIQUE(company_id, credit_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_credit_notes_company ON credit_notes(company_id);
+CREATE INDEX IF NOT EXISTS idx_credit_notes_user ON credit_notes(user_id);
+
+-- ============================================================
+-- 17b. CREDIT_NOTE_ITEMS — line items on a credit note
+-- ============================================================
+CREATE TABLE IF NOT EXISTS credit_note_items (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  credit_note_id  UUID NOT NULL REFERENCES credit_notes(id) ON DELETE CASCADE,
+  description     TEXT NOT NULL,
+  quantity        NUMERIC(10, 2) NOT NULL DEFAULT 1,
+  unit_price      NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  total           NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  created_at      TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_credit_note_items_cn ON credit_note_items(credit_note_id);

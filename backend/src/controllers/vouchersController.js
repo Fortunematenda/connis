@@ -2,6 +2,8 @@ const crypto = require('crypto');
 const pool = require('../config/db');
 const { ApiError } = require('../middleware/errorHandler');
 const { checkAndReactivate } = require('../services/billingService');
+const { recordTransaction, getComputedBalance } = require('../services/transactionHelper');
+const { generateVoucherInvoice } = require('../services/invoiceService');
 
 // Generate a random voucher code like "VCH-A3F8-K9X2"
 const generateCode = () => {
@@ -108,32 +110,45 @@ const redeemVoucher = async (req, res, next) => {
       [user_id, voucher.id]
     );
 
-    // Credit user balance
-    await client.query(
-      'UPDATE users SET balance = balance + $1, updated_at = NOW() WHERE id = $2',
-      [voucher.amount, user_id]
-    );
+    // Record credit transaction (also syncs cached balance)
+    const tx = await recordTransaction(client, {
+      companyId: req.companyId,
+      userId: user_id,
+      amount: voucher.amount,
+      type: 'credit',
+      category: 'voucher',
+      description: `Voucher redeemed: ${voucher.code}`,
+      reference: voucher.code,
+      createdBy: req.adminId || null,
+    });
 
-    // Record transaction
-    await client.query(
-      `INSERT INTO transactions (company_id, user_id, amount, type, description, created_by)
-       VALUES ($1, $2, $3, 'credit', $4, $5)`,
-      [req.companyId, user_id, voucher.amount, `Voucher redeemed: ${voucher.code}`, req.adminId || null]
-    );
+    // Auto-generate invoice for voucher redemption
+    try {
+      await generateVoucherInvoice(client, {
+        companyId: req.companyId,
+        userId: user_id,
+        voucherCode: voucher.code,
+        amount: voucher.amount,
+        transactionId: tx.id,
+        createdBy: req.adminId || null,
+      });
+    } catch (invErr) {
+      console.warn(`[VOUCHER] Invoice generation failed: ${invErr.message}`);
+    }
 
     await client.query('COMMIT');
 
     // Reactivate user if balance is now positive and user was suspended
     await checkAndReactivate(user_id);
 
-    const updatedUser = await pool.query('SELECT balance FROM users WHERE id = $1', [user_id]);
+    const balance = await getComputedBalance(user_id);
 
     res.json({
       success: true,
       data: {
         voucher_code: voucher.code,
         amount: voucher.amount,
-        new_balance: updatedUser.rows[0].balance,
+        new_balance: balance,
       },
     });
   } catch (err) {

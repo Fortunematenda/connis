@@ -15,6 +15,11 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import VouchersPage from './pages/VouchersPage';
 import MessagesPage from './pages/MessagesPage';
+import TransactionsPage from './pages/TransactionsPage';
+import InvoicesPage from './pages/InvoicesPage';
+import QuotesPage from './pages/QuotesPage';
+import CreditNotesPage from './pages/CreditNotesPage';
+import ItemsPage from './pages/ItemsPage';
 import PortalLogin from './pages/portal/PortalLogin';
 import PortalLayout from './components/portal/PortalLayout';
 import PortalDashboard from './pages/portal/PortalDashboard';
@@ -55,6 +60,11 @@ export default function App() {
         <Route path="/vouchers" element={<VouchersPage />} />
         <Route path="/messages" element={<MessagesPage />} />
         <Route path="/messages/:userId" element={<MessagesPage />} />
+        <Route path="/accounting/transactions" element={<TransactionsPage />} />
+        <Route path="/accounting/invoices" element={<InvoicesPage />} />
+        <Route path="/accounting/quotes" element={<QuotesPage />} />
+        <Route path="/accounting/credits" element={<CreditNotesPage />} />
+        <Route path="/accounting/items" element={<ItemsPage />} />
         <Route path="/network" element={<NetworkPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>

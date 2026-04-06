@@ -5,6 +5,8 @@ const { generateCustomerToken } = require('../middleware/customerAuth');
 const { getRouterConfigForCompany } = require('../services/routerResolver');
 const sessionCache = require('../services/sessionCache');
 const { checkAndReactivate } = require('../services/billingService');
+const { recordTransaction, getComputedBalance } = require('../services/transactionHelper');
+const { generateVoucherInvoice } = require('../services/invoiceService');
 const { createNotification } = require('./notificationsController');
 
 // POST /portal/login — Customer login with PPPoE username + password
@@ -149,32 +151,43 @@ const redeemVoucher = async (req, res, next) => {
       [req.userId, voucher.id]
     );
 
-    // Credit user balance
-    await client.query(
-      'UPDATE users SET balance = balance + $1, updated_at = NOW() WHERE id = $2',
-      [voucher.amount, req.userId]
-    );
+    // Record credit transaction (also syncs cached balance)
+    const tx = await recordTransaction(client, {
+      companyId: req.companyId,
+      userId: req.userId,
+      amount: voucher.amount,
+      type: 'credit',
+      category: 'voucher',
+      description: `Voucher redeemed: ${voucher.code}`,
+      reference: voucher.code,
+    });
 
-    // Record transaction
-    await client.query(
-      `INSERT INTO transactions (company_id, user_id, amount, type, description)
-       VALUES ($1, $2, $3, 'credit', $4)`,
-      [req.companyId, req.userId, voucher.amount, `Voucher redeemed: ${voucher.code}`]
-    );
+    // Auto-generate invoice for voucher redemption
+    try {
+      await generateVoucherInvoice(client, {
+        companyId: req.companyId,
+        userId: req.userId,
+        voucherCode: voucher.code,
+        amount: voucher.amount,
+        transactionId: tx.id,
+      });
+    } catch (invErr) {
+      console.warn(`[PORTAL] Invoice generation failed: ${invErr.message}`);
+    }
 
     await client.query('COMMIT');
 
     // Reactivate user if they were suspended and balance is now positive
     await checkAndReactivate(req.userId);
 
-    const updated = await pool.query('SELECT balance FROM users WHERE id = $1', [req.userId]);
+    const balance = await getComputedBalance(req.userId);
 
     res.json({
       success: true,
       data: {
         voucher_code: voucher.code,
         amount: voucher.amount,
-        new_balance: updated.rows[0].balance,
+        new_balance: balance,
       },
     });
   } catch (err) {

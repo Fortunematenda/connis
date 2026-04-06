@@ -1,4 +1,5 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   UserCheck,
@@ -13,6 +14,13 @@ import {
   LogOut,
   Globe,
   X,
+  DollarSign,
+  Receipt,
+  FileText,
+  ChevronDown,
+  ClipboardList,
+  RotateCcw,
+  Package,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -25,6 +33,17 @@ const navItems = [
   { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
   { to: '/plans', icon: Wifi, label: 'Plans' },
   { to: '/vouchers', icon: TicketCheck, label: 'Vouchers' },
+];
+
+const accountingItems = [
+  { to: '/accounting/transactions', icon: Receipt, label: 'Transactions' },
+  { to: '/accounting/invoices', icon: FileText, label: 'Invoices' },
+  { to: '/accounting/quotes', icon: ClipboardList, label: 'Quotes' },
+  { to: '/accounting/credits', icon: RotateCcw, label: 'Credit Notes' },
+  { to: '/accounting/items', icon: Package, label: 'Items' },
+];
+
+const bottomItems = [
   { to: '/staff', icon: Shield, label: 'Staff' },
   { to: '/network', icon: Globe, label: 'Network' },
   { to: '/settings', icon: Settings, label: 'Settings' },
@@ -33,6 +52,8 @@ const navItems = [
 export default function Sidebar({ mobileOpen, onClose }) {
   const { company, admin, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [acctOpen, setAcctOpen] = useState(() => location.pathname.startsWith('/accounting'));
 
   const handleLogout = () => {
     logout();
@@ -42,6 +63,15 @@ export default function Sidebar({ mobileOpen, onClose }) {
   const handleNav = () => {
     if (onClose) onClose();
   };
+
+  const isAcctActive = location.pathname.startsWith('/accounting');
+
+  const linkClass = ({ isActive }) =>
+    `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+      isActive
+        ? 'bg-amber-500/90 text-white shadow-lg shadow-amber-500/20'
+        : 'text-indigo-200/70 hover:bg-white/8 hover:text-white'
+    }`;
 
   return (
     <>
@@ -70,19 +100,40 @@ export default function Sidebar({ mobileOpen, onClose }) {
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {navItems.map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              onClick={handleNav}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
-                  isActive
-                    ? 'bg-amber-500/90 text-white shadow-lg shadow-amber-500/20'
-                    : 'text-indigo-200/70 hover:bg-white/8 hover:text-white'
-                }`
-              }
-            >
+            <NavLink key={to} to={to} end={to === '/'} onClick={handleNav} className={linkClass}>
+              <Icon size={18} />
+              {label}
+            </NavLink>
+          ))}
+
+          {/* Accounting section (collapsible) */}
+          <button
+            onClick={() => setAcctOpen(!acctOpen)}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 w-full ${
+              isAcctActive ? 'text-amber-400' : 'text-indigo-200/70 hover:bg-white/8 hover:text-white'
+            }`}
+          >
+            <DollarSign size={18} />
+            <span className="flex-1 text-left">Accounting</span>
+            <ChevronDown size={14} className={`transition-transform duration-200 ${acctOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {acctOpen && (
+            <div className="ml-4 pl-3 border-l border-white/10 space-y-0.5">
+              {accountingItems.map(({ to, icon: Icon, label }) => (
+                <NavLink key={to} to={to} onClick={handleNav} className={linkClass}>
+                  <Icon size={16} />
+                  {label}
+                </NavLink>
+              ))}
+            </div>
+          )}
+
+          {/* Separator */}
+          <div className="pt-2 mt-2 border-t border-white/10" />
+
+          {bottomItems.map(({ to, icon: Icon, label }) => (
+            <NavLink key={to} to={to} onClick={handleNav} className={linkClass}>
               <Icon size={18} />
               {label}
             </NavLink>

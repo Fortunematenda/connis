@@ -25,6 +25,10 @@ const transactionsRoutes = require('./routes/transactions');
 const portalRoutes = require('./routes/portal');
 const notificationsRoutes = require('./routes/notifications');
 const messagesRoutes = require('./routes/messages');
+const invoicesRoutes = require('./routes/invoices');
+const quotesRoutes = require('./routes/quotes');
+const creditNotesRoutes = require('./routes/creditNotes');
+const billableItemsRoutes = require('./routes/billableItems');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -64,6 +68,10 @@ app.use('/api/vouchers', protect, vouchersRoutes);
 app.use('/api/transactions', protect, transactionsRoutes);
 app.use('/api/notifications', protect, notificationsRoutes);
 app.use('/api/messages', protect, messagesRoutes);
+app.use('/api/invoices', protect, invoicesRoutes);
+app.use('/api/quotes', protect, quotesRoutes);
+app.use('/api/credit-notes', protect, creditNotesRoutes);
+app.use('/api/billable-items', protect, billableItemsRoutes);
 
 // ── 404 handler ────────────────────────────────────────────
 app.use((req, res) => {
@@ -75,6 +83,7 @@ app.use(errorHandler);
 
 // ── Start server ───────────────────────────────────────────
 const { runDailyDeductions } = require('./services/billingService');
+const { generateMonthlyInvoices } = require('./services/invoiceService');
 
 const start = async () => {
   try {
@@ -88,11 +97,21 @@ const start = async () => {
 
     // Run daily billing deductions every 24 hours (at startup + interval)
     const BILLING_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+    const runBillingCycle = async () => {
+      try {
+        await runDailyDeductions();
+        // Generate monthly invoices on the 1st of each month
+        const today = new Date();
+        if (today.getDate() === 1) {
+          await generateMonthlyInvoices();
+        }
+      } catch (err) {
+        console.error('[CRON] Billing cycle error:', err.message);
+      }
+    };
     setTimeout(() => {
-      runDailyDeductions().catch(err => console.error('[CRON] Billing error:', err.message));
-      setInterval(() => {
-        runDailyDeductions().catch(err => console.error('[CRON] Billing error:', err.message));
-      }, BILLING_INTERVAL);
+      runBillingCycle();
+      setInterval(runBillingCycle, BILLING_INTERVAL);
     }, 60000); // Wait 1 min after startup before first run
   } catch (err) {
     console.error('[SERVER] Failed to start:', err.message);

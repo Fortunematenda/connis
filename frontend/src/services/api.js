@@ -454,16 +454,148 @@ export const transactionsApi = {
     const res = await authFetch(`${API_BASE}/transactions${qs ? '?' + qs : ''}`);
     return handleResponse(res);
   },
-  credit: async (user_id, amount, description) => {
+  getByUser: async (userId, params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    const res = await authFetch(`${API_BASE}/transactions/user/${userId}${qs ? '?' + qs : ''}`);
+    return handleResponse(res);
+  },
+  getBalance: async (userId) => {
+    const res = await authFetch(`${API_BASE}/transactions/balance/${userId}`);
+    return handleResponse(res);
+  },
+  credit: async (user_id, amount, description, category) => {
     const res = await authFetch(`${API_BASE}/transactions/credit`, {
-      method: 'POST', body: JSON.stringify({ user_id, amount, description }),
+      method: 'POST', body: JSON.stringify({ user_id, amount, description, category }),
     });
     return handleResponse(res);
   },
-  debit: async (user_id, amount, description) => {
+  debit: async (user_id, amount, description, category) => {
     const res = await authFetch(`${API_BASE}/transactions/debit`, {
-      method: 'POST', body: JSON.stringify({ user_id, amount, description }),
+      method: 'POST', body: JSON.stringify({ user_id, amount, description, category }),
     });
+    return handleResponse(res);
+  },
+};
+
+// ── Invoices API (admin) ──────────────────────────────────────
+
+export const invoicesApi = {
+  getAll: async (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    const res = await authFetch(`${API_BASE}/invoices${qs ? '?' + qs : ''}`);
+    return handleResponse(res);
+  },
+  getByUser: async (userId, params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    const res = await authFetch(`${API_BASE}/invoices/user/${userId}${qs ? '?' + qs : ''}`);
+    return handleResponse(res);
+  },
+  getById: async (id) => {
+    const res = await authFetch(`${API_BASE}/invoices/${id}`);
+    return handleResponse(res);
+  },
+  create: async (data) => {
+    const res = await authFetch(`${API_BASE}/invoices`, {
+      method: 'POST', body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  updateStatus: async (id, status) => {
+    const res = await authFetch(`${API_BASE}/invoices/${id}/status`, {
+      method: 'PUT', body: JSON.stringify({ status }),
+    });
+    return handleResponse(res);
+  },
+};
+
+// ── Quotes API (admin) ────────────────────────────────────────
+
+export const quotesApi = {
+  getAll: async (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    const res = await authFetch(`${API_BASE}/quotes${qs ? '?' + qs : ''}`);
+    return handleResponse(res);
+  },
+  getById: async (id) => {
+    const res = await authFetch(`${API_BASE}/quotes/${id}`);
+    return handleResponse(res);
+  },
+  create: async (data) => {
+    const res = await authFetch(`${API_BASE}/quotes`, {
+      method: 'POST', body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  updateStatus: async (id, status) => {
+    const res = await authFetch(`${API_BASE}/quotes/${id}/status`, {
+      method: 'PUT', body: JSON.stringify({ status }),
+    });
+    return handleResponse(res);
+  },
+  convertToInvoice: async (id) => {
+    const res = await authFetch(`${API_BASE}/quotes/${id}/convert`, { method: 'POST' });
+    return handleResponse(res);
+  },
+  delete: async (id) => {
+    const res = await authFetch(`${API_BASE}/quotes/${id}`, { method: 'DELETE' });
+    return handleResponse(res);
+  },
+};
+
+// ── Credit Notes API (admin) ──────────────────────────────────
+
+export const creditNotesApi = {
+  getAll: async (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    const res = await authFetch(`${API_BASE}/credit-notes${qs ? '?' + qs : ''}`);
+    return handleResponse(res);
+  },
+  getById: async (id) => {
+    const res = await authFetch(`${API_BASE}/credit-notes/${id}`);
+    return handleResponse(res);
+  },
+  create: async (data) => {
+    const res = await authFetch(`${API_BASE}/credit-notes`, {
+      method: 'POST', body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  apply: async (id) => {
+    const res = await authFetch(`${API_BASE}/credit-notes/${id}/apply`, { method: 'PUT' });
+    return handleResponse(res);
+  },
+};
+
+// ── Billable Items API (admin) ────────────────────────────────
+
+export const billableItemsApi = {
+  getAll: async (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    const res = await authFetch(`${API_BASE}/billable-items${qs ? '?' + qs : ''}`);
+    return handleResponse(res);
+  },
+  getById: async (id) => {
+    const res = await authFetch(`${API_BASE}/billable-items/${id}`);
+    return handleResponse(res);
+  },
+  create: async (data) => {
+    const res = await authFetch(`${API_BASE}/billable-items`, {
+      method: 'POST', body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  update: async (id, data) => {
+    const res = await authFetch(`${API_BASE}/billable-items/${id}`, {
+      method: 'PUT', body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  delete: async (id) => {
+    const res = await authFetch(`${API_BASE}/billable-items/${id}`, { method: 'DELETE' });
+    return handleResponse(res);
+  },
+  syncPlans: async () => {
+    const res = await authFetch(`${API_BASE}/billable-items/sync-plans`, { method: 'POST' });
     return handleResponse(res);
   },
 };
