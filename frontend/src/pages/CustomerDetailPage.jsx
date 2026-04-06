@@ -14,13 +14,11 @@ import LiveBandwidth from '../components/LiveBandwidth';
 import CustomerTickets from '../components/CustomerTickets';
 import CustomerDocuments from '../components/CustomerDocuments';
 import CustomerTasks from '../components/CustomerTasks';
-import CustomerTransactions from '../components/CustomerTransactions';
 import CustomerInvoices from '../components/CustomerInvoices';
 
 // ── Tabs ──────────────────────────────────────────────────────
 const TABS = [
   { key: 'overview', label: 'Overview' },
-  { key: 'finance', label: 'Finance' },
   { key: 'invoices', label: 'Invoices' },
   { key: 'services', label: 'Services' },
   { key: 'statistics', label: 'Statistics' },
@@ -636,10 +634,6 @@ export default function CustomerDetailPage() {
             </div>
           </div>
         </div>
-      )}
-
-      {tab === 'finance' && (
-        <CustomerTransactions customerId={id} onBalanceUpdate={(bal) => setCustomer(prev => prev ? { ...prev, balance: bal } : prev)} />
       )}
 
       {tab === 'invoices' && <CustomerInvoices customerId={id} />}

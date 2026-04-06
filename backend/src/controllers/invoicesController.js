@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const { ApiError } = require('../middleware/errorHandler');
 const { createInvoice } = require('../services/invoiceService');
+const { recordTransaction } = require('../services/transactionHelper');
 
 // GET /invoices — List invoices for company (admin)
 const getInvoices = async (req, res, next) => {
@@ -138,6 +139,21 @@ const createManualInvoice = async (req, res, next) => {
       status: 'issued',
     });
 
+    // Record debit transaction — customer now owes this amount
+    const tx = await recordTransaction(client, {
+      companyId: req.companyId,
+      userId: user_id,
+      amount: invoice.total,
+      type: 'debit',
+      category: 'manual',
+      description: `Invoice ${invoice.invoice_number}`,
+      reference: invoice.invoice_number,
+      createdBy: req.adminId || null,
+    });
+
+    // Link transaction to invoice
+    await client.query('UPDATE invoices SET transaction_id = $1 WHERE id = $2', [tx.id, invoice.id]);
+
     await client.query('COMMIT');
 
     res.status(201).json({ success: true, data: invoice });
@@ -151,6 +167,7 @@ const createManualInvoice = async (req, res, next) => {
 
 // PUT /invoices/:id/status — Update invoice status (e.g. mark paid, cancel)
 const updateInvoiceStatus = async (req, res, next) => {
+  const client = await pool.connect();
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -159,23 +176,64 @@ const updateInvoiceStatus = async (req, res, next) => {
       throw new ApiError(400, `Invalid status. Must be one of: ${validStatuses.join(', ')}`);
     }
 
+    await client.query('BEGIN');
+
+    // Fetch current invoice
+    const invRes = await client.query(
+      'SELECT * FROM invoices WHERE id = $1 AND company_id = $2 FOR UPDATE',
+      [id, req.companyId]
+    );
+    if (invRes.rows.length === 0) throw new ApiError(404, 'Invoice not found');
+    const invoice = invRes.rows[0];
+
     const updates = ['status = $1', 'updated_at = NOW()'];
     const params = [status, id, req.companyId];
 
-    if (status === 'paid') {
+    if (status === 'paid' && invoice.status !== 'paid') {
       updates.push('paid_at = NOW()');
       updates.push('amount_paid = total');
+
+      // Record credit transaction — payment received
+      await recordTransaction(client, {
+        companyId: req.companyId,
+        userId: invoice.user_id,
+        amount: parseFloat(invoice.total),
+        type: 'credit',
+        category: 'payment',
+        description: `Payment for ${invoice.invoice_number}`,
+        reference: invoice.invoice_number,
+        createdBy: req.adminId || null,
+      });
     }
 
-    const result = await pool.query(
+    if (status === 'cancelled' && invoice.status === 'issued') {
+      // Reverse the debit if cancelling an issued invoice
+      await recordTransaction(client, {
+        companyId: req.companyId,
+        userId: invoice.user_id,
+        amount: parseFloat(invoice.total),
+        type: 'credit',
+        category: 'adjustment',
+        description: `Invoice cancelled: ${invoice.invoice_number}`,
+        reference: invoice.invoice_number,
+        createdBy: req.adminId || null,
+      });
+    }
+
+    const result = await client.query(
       `UPDATE invoices SET ${updates.join(', ')} WHERE id = $2 AND company_id = $3 RETURNING *`,
       params
     );
 
-    if (result.rows.length === 0) throw new ApiError(404, 'Invoice not found');
+    await client.query('COMMIT');
 
     res.json({ success: true, data: result.rows[0] });
-  } catch (err) { next(err); }
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
 };
 
 module.exports = { getInvoices, getUserInvoices, getInvoiceById, createManualInvoice, updateInvoiceStatus };
