@@ -42,13 +42,13 @@ const getCustomerStatistics = async (req, res, next) => {
     // 1. Daily bandwidth usage (for chart)
     const dailyUsage = await radiusDb.query(
       `SELECT
-        (acctstarttime AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Johannesburg')::date AS date,
+        DATE(acctstarttime) AS date,
         COALESCE(SUM(acctinputoctets), 0) AS download_bytes,
         COALESCE(SUM(acctoutputoctets), 0) AS upload_bytes,
         COUNT(*) AS sessions
       FROM radacct
       WHERE username = $1 AND acctstarttime >= $2::timestamptz
-      GROUP BY (acctstarttime AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Johannesburg')::date
+      GROUP BY DATE(acctstarttime)
       ORDER BY date ASC`,
       [username, startDate.toISOString()]
     );
