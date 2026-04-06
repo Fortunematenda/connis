@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FileText, Plus, X, Download, Trash2, Loader2, Upload } from 'lucide-react';
+import { FileText, Plus, X, Download, Trash2, Loader2, Upload, Edit3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { documentsApi } from '../services/api';
 
@@ -18,6 +18,10 @@ export default function CustomerDocuments({ customerId }) {
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [description, setDescription] = useState('');
+  const [editingDoc, setEditingDoc] = useState(null);
 
   const fetchDocs = useCallback(async () => {
     try {
@@ -29,20 +33,30 @@ export default function CustomerDocuments({ customerId }) {
 
   useEffect(() => { fetchDocs(); }, [fetchDocs]);
 
-  const handleUpload = async (e) => {
+  const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setSelectedFile(file);
+    setShowUploadModal(true);
+    e.target.value = '';
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) return;
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', selectedFile);
       formData.append('user_id', customerId);
+      formData.append('description', description);
       await documentsApi.upload(formData);
       toast.success('Document uploaded');
+      setShowUploadModal(false);
+      setSelectedFile(null);
+      setDescription('');
       fetchDocs();
     } catch (err) { toast.error(err.message || 'Upload failed'); }
     setUploading(false);
-    e.target.value = '';
   };
 
   const handleDelete = async (id, name) => {
@@ -52,6 +66,15 @@ export default function CustomerDocuments({ customerId }) {
       toast.success('Document deleted');
       fetchDocs();
     } catch (err) { toast.error(err.message); }
+  };
+
+  const handleUpdateDescription = async (id, newDesc) => {
+    try {
+      await documentsApi.update(id, { description: newDesc });
+      toast.success('Description updated');
+      setEditingDoc(null);
+      fetchDocs();
+    } catch (err) { toast.error(err.message || 'Update failed'); }
   };
 
   const handleDownload = async (id, name) => {
@@ -79,11 +102,55 @@ export default function CustomerDocuments({ customerId }) {
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-400">{docs.length} document{docs.length !== 1 ? 's' : ''}</p>
         <label className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 cursor-pointer">
-          {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+          <Upload size={14} />
           Upload
-          <input type="file" className="hidden" onChange={handleUpload} disabled={uploading} />
+          <input type="file" className="hidden" onChange={handleFileSelect} disabled={uploading} />
         </label>
       </div>
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Upload Document</h3>
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-3 flex items-center gap-3">
+                <FileText size={20} className="text-blue-500" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{selectedFile?.name}</p>
+                  <p className="text-xs text-gray-500">{selectedFile ? fmtSize(selectedFile.size) : ''}</p>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">Description (optional)</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Enter document description..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 mt-6">
+              <button
+                onClick={() => { setShowUploadModal(false); setSelectedFile(null); setDescription(''); }}
+                className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpload}
+                disabled={uploading}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                {uploading ? 'Uploading...' : 'Upload'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       {docs.length === 0 ? (
@@ -97,6 +164,7 @@ export default function CustomerDocuments({ customerId }) {
             <thead>
               <tr className="text-left text-xs text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b">
                 <th className="px-4 py-3 font-medium">Name</th>
+                <th className="px-4 py-3 font-medium">Description</th>
                 <th className="px-4 py-3 font-medium">Size</th>
                 <th className="px-4 py-3 font-medium">Uploaded by</th>
                 <th className="px-4 py-3 font-medium">Date</th>
@@ -111,6 +179,34 @@ export default function CustomerDocuments({ customerId }) {
                       <FileText size={14} className="text-gray-400 flex-shrink-0" />
                       <span className="font-medium text-gray-800 truncate max-w-xs">{d.name}</span>
                     </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    {editingDoc === d.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          defaultValue={d.description || ''}
+                          autoFocus
+                          onBlur={(e) => handleUpdateDescription(d.id, e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleUpdateDescription(d.id, e.target.value);
+                            if (e.key === 'Escape') setEditingDoc(null);
+                          }}
+                          className="flex-1 px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 group">
+                        <span className="text-gray-600 truncate max-w-xs">{d.description || <span className="text-gray-300 italic">No description</span>}</span>
+                        <button
+                          onClick={() => setEditingDoc(d.id)}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-600 rounded transition"
+                          title="Edit description"
+                        >
+                          <Edit3 size={12} />
+                        </button>
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-gray-500">{fmtSize(d.file_size)}</td>
                   <td className="px-4 py-3 text-gray-500">{d.uploaded_by_name || '—'}</td>

@@ -31,14 +31,14 @@ const getDocuments = async (req, res, next) => {
 const uploadDocument = async (req, res, next) => {
   try {
     if (!req.file) throw new ApiError(400, 'No file uploaded');
-    const { user_id, ticket_id } = req.body;
+    const { user_id, ticket_id, description } = req.body;
 
     const result = await pool.query(
-      `INSERT INTO documents (company_id, user_id, ticket_id, name, file_path, file_size, mime_type, uploaded_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO documents (company_id, user_id, ticket_id, name, description, file_path, file_size, mime_type, uploaded_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [req.companyId, user_id || null, ticket_id || null,
-       req.file.originalname, req.file.path, req.file.size, req.file.mimetype, req.adminId || null]
+       req.file.originalname, description || null, req.file.path, req.file.size, req.file.mimetype, req.adminId || null]
     );
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (err) { next(err); }
@@ -58,6 +58,21 @@ const downloadDocument = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// PUT /documents/:id — update document metadata
+const updateDocument = async (req, res, next) => {
+  try {
+    const { description } = req.body;
+    const result = await pool.query(
+      `UPDATE documents SET description = $1, updated_at = NOW()
+       WHERE id = $2 AND company_id = $3
+       RETURNING *`,
+      [description || null, req.params.id, req.companyId]
+    );
+    if (result.rows.length === 0) throw new ApiError(404, 'Document not found');
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) { next(err); }
+};
+
 // DELETE /documents/:id
 const deleteDocument = async (req, res, next) => {
   try {
@@ -72,4 +87,4 @@ const deleteDocument = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { getDocuments, uploadDocument, downloadDocument, deleteDocument };
+module.exports = { getDocuments, uploadDocument, updateDocument, downloadDocument, deleteDocument };

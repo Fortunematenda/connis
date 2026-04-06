@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const { getDocuments, uploadDocument, downloadDocument, deleteDocument } = require('../controllers/documentsController');
+const { getDocuments, uploadDocument, updateDocument, downloadDocument, deleteDocument } = require('../controllers/documentsController');
 
 const storage = multer.diskStorage({
   destination: path.join(__dirname, '../../uploads/documents'),
@@ -16,6 +16,7 @@ const router = express.Router();
 
 router.get('/', getDocuments);
 router.post('/', upload.single('file'), uploadDocument);
+router.put('/:id', updateDocument);
 router.get('/:id/download', downloadDocument);
 router.delete('/:id', deleteDocument);
 
