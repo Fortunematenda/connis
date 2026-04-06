@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CheckSquare, Plus, X, Loader2, Calendar, Trash2 } from 'lucide-react';
+import { CheckSquare, Plus, X, Loader2, Calendar, Trash2, Edit3, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { tasksApi, staffApi } from '../services/api';
 
@@ -24,6 +24,8 @@ export default function CustomerTasks({ customerId }) {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', priority: 'medium', assigned_to: '', due_date: '' });
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({});
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -60,6 +62,33 @@ export default function CustomerTasks({ customerId }) {
     if (!confirm('Delete this task?')) return;
     try { await tasksApi.remove(id); toast.success('Deleted'); fetchTasks(); }
     catch (e) { toast.error(e.message); }
+  };
+
+  const handleEdit = (task) => {
+    setEditingId(task.id);
+    setEditForm({
+      title: task.title,
+      description: task.description || '',
+      priority: task.priority,
+      assigned_to: task.assigned_to || '',
+      due_date: task.due_date || '',
+      status: task.status,
+    });
+  };
+
+  const handleSave = async () => {
+    try {
+      await tasksApi.update(editingId, editForm);
+      toast.success('Task updated');
+      setEditingId(null);
+      setEditForm({});
+      fetchTasks();
+    } catch (e) { toast.error(e.message); }
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setEditForm({});
   };
 
   if (loading) {
@@ -123,23 +152,51 @@ export default function CustomerTasks({ customerId }) {
               {tasks.map(t => (
                 <tr key={t.id} className={`border-b last:border-0 hover:bg-gray-50/50 transition-colors ${isOverdue(t.due_date, t.status) ? 'bg-red-50/30' : ''}`}>
                   <td className="px-4 py-2.5">
-                    <p className="font-medium text-gray-900">{t.title}</p>
-                    {t.description && <p className="text-[11px] text-gray-400 mt-0.5 truncate max-w-[200px]">{t.description}</p>}
+                    {editingId === t.id ? (
+                      <input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                        className="w-full px-2 py-1 border rounded text-sm" />
+                    ) : (
+                      <>
+                        <p className="font-medium text-gray-900">{t.title}</p>
+                        {t.description && <p className="text-[11px] text-gray-400 mt-0.5 truncate max-w-[200px]">{t.description}</p>}
+                      </>
+                    )}
                   </td>
                   <td className="px-4 py-2.5">
-                    <select value={t.status} onChange={(e) => handleStatusChange(t.id, e.target.value)}
-                      className={`text-[11px] font-medium px-2 py-0.5 rounded-full cursor-pointer border-0 ${STATUS_META[t.status]?.color || 'bg-gray-100'}`}>
+                    <select value={editingId === t.id ? editForm.status : t.status}
+                      onChange={(e) => editingId === t.id ? setEditForm({ ...editForm, status: e.target.value }) : handleStatusChange(t.id, e.target.value)}
+                      className={`text-[11px] font-medium px-2 py-0.5 rounded-full cursor-pointer border-0 ${STATUS_META[(editingId === t.id ? editForm.status : t.status)]?.color || 'bg-gray-100'}`}>
                       {Object.entries(STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                     </select>
                   </td>
                   <td className="px-4 py-2.5">
-                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${PRIORITY_META[t.priority]?.color || ''}`}>
-                      {PRIORITY_META[t.priority]?.label || t.priority}
-                    </span>
+                    {editingId === t.id ? (
+                      <select value={editForm.priority} onChange={(e) => setEditForm({ ...editForm, priority: e.target.value })}
+                        className="text-[11px] font-semibold px-2 py-0.5 rounded-full border-0">
+                        {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                      </select>
+                    ) : (
+                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${PRIORITY_META[t.priority]?.color || ''}`}>
+                        {PRIORITY_META[t.priority]?.label || t.priority}
+                      </span>
+                    )}
                   </td>
-                  <td className="px-4 py-2.5 text-xs text-gray-600">{t.assigned_name || '—'}</td>
+                  <td className="px-4 py-2.5 text-xs text-gray-600">
+                    {editingId === t.id ? (
+                      <select value={editForm.assigned_to} onChange={(e) => setEditForm({ ...editForm, assigned_to: e.target.value })}
+                        className="px-2 py-1 border rounded text-xs w-full">
+                        <option value="">Unassigned</option>
+                        {staff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+                      </select>
+                    ) : (
+                      t.assigned_name || '—'
+                    )}
+                  </td>
                   <td className="px-4 py-2.5 text-xs">
-                    {t.due_date ? (
+                    {editingId === t.id ? (
+                      <input type="date" value={editForm.due_date} onChange={(e) => setEditForm({ ...editForm, due_date: e.target.value })}
+                        className="px-2 py-1 border rounded text-xs" />
+                    ) : t.due_date ? (
                       <span className={`flex items-center gap-1 ${isOverdue(t.due_date, t.status) ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
                         <Calendar size={12} /> {fmtDate(t.due_date)}
                       </span>
@@ -147,9 +204,25 @@ export default function CustomerTasks({ customerId }) {
                   </td>
                   <td className="px-4 py-2.5 text-xs text-gray-600">{t.created_by_name || '—'}</td>
                   <td className="px-4 py-2.5 text-right">
-                    <button onClick={() => handleDelete(t.id)} className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded">
-                      <Trash2 size={13} />
-                    </button>
+                    {editingId === t.id ? (
+                      <div className="flex items-center gap-1 justify-end">
+                        <button onClick={handleSave} className="p-1 text-green-600 hover:bg-green-50 rounded" title="Save">
+                          <Save size={13} />
+                        </button>
+                        <button onClick={handleCancel} className="p-1 text-gray-400 hover:bg-gray-50 rounded" title="Cancel">
+                          <X size={13} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 justify-end">
+                        <button onClick={() => handleEdit(t)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+                          <Edit3 size={13} />
+                        </button>
+                        <button onClick={() => handleDelete(t.id)} className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

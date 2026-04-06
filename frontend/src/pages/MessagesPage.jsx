@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import {
   MessageSquare, Send, Loader2, Search, ArrowLeft, User, Clock, Paperclip,
-  Phone, Mail, CalendarPlus, ExternalLink, X, Wrench, AlertTriangle,
+  Phone, Mail, CalendarPlus, ExternalLink, X, Wrench, AlertTriangle, Reply,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { messagesApi, tasksApi, staffApi } from '../services/api';
@@ -40,7 +41,7 @@ function parseTaskCard(content) {
   return null;
 }
 
-function TaskCardAdmin({ task }) {
+function TaskCardAdmin({ task, onReply }) {
   const dateStr = task.date ? new Date(task.date).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : 'TBD';
   return (
     <div className="w-full max-w-[280px] bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl overflow-hidden shadow-sm">
@@ -55,6 +56,11 @@ function TaskCardAdmin({ task }) {
           <div className="flex items-center gap-2 text-xs text-gray-700"><Clock size={11} className="text-orange-500" /> {dateStr}</div>
           {task.technician && <div className="flex items-center gap-2 text-xs text-gray-700"><Wrench size={11} className="text-orange-500" /> {task.technician}</div>}
           <div className="flex items-center gap-2 text-xs"><AlertTriangle size={11} className="text-orange-500" /><span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${priorityColors[task.priority] || priorityColors.medium}`}>{task.priority?.toUpperCase()}</span></div>
+        </div>
+        <div className="pt-2 border-t border-orange-200/60">
+          <button onClick={() => onReply && onReply(task)} className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium text-orange-700 bg-white border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors">
+            <Reply size={12} /> Reply to Task
+          </button>
         </div>
       </div>
     </div>
@@ -73,6 +79,7 @@ const fmtRelative = (d) => {
 export default function MessagesPage() {
   const { userId } = useParams();
   const navigate = useNavigate();
+  const { admin } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [messages, setMessages] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -85,6 +92,7 @@ export default function MessagesPage() {
   const [taskForm, setTaskForm] = useState({ title: '', description: '', due_date: '', priority: 'medium', assigned_to: '' });
   const [taskSaving, setTaskSaving] = useState(false);
   const [staff, setStaff] = useState([]);
+  const [replyTo, setReplyTo] = useState(null);
   const bottomRef = useRef(null);
   const pollRef = useRef(null);
 
@@ -136,8 +144,15 @@ export default function MessagesPage() {
       const res = await messagesApi.send(userId, text.trim());
       setMessages([...messages, res.data]);
       setText('');
+      setReplyTo(null);
     } catch (err) { toast.error(err.message); }
     setSending(false);
+  };
+
+  const handleReplyTask = (task) => {
+    setReplyTo(task);
+    setText(`Re: ${task.title}\n\n`);
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const selectConversation = (uid) => {
@@ -156,6 +171,7 @@ export default function MessagesPage() {
         priority: taskForm.priority,
         due_date: taskForm.due_date || null,
         assigned_to: taskForm.assigned_to || null,
+        created_by: admin?.id,
       });
       // Send structured task card message
       const taskCard = JSON.stringify({
@@ -308,7 +324,7 @@ export default function MessagesPage() {
                             <p className="text-[10px] text-gray-400 mb-0.5 mr-1 text-right">{m.admin_name}</p>
                           )}
                           {taskData ? (
-                            <TaskCardAdmin task={taskData} />
+                            <TaskCardAdmin task={taskData} onReply={handleReplyTask} />
                           ) : (
                           <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
                             isAdmin
@@ -345,10 +361,21 @@ export default function MessagesPage() {
 
             {/* Input */}
             <div className="px-5 py-3 bg-white border-t">
+              {replyTo && (
+                <div className="flex items-center justify-between px-3 py-2 bg-orange-50 border border-orange-200 rounded-lg mb-2">
+                  <div className="flex items-center gap-2 text-xs text-orange-700">
+                    <Reply size={12} />
+                    <span className="font-medium">Replying to task: {replyTo.title}</span>
+                  </div>
+                  <button onClick={() => { setReplyTo(null); setText(''); }} className="p-1 text-orange-400 hover:text-orange-600">
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
               <form onSubmit={handleSend} className="flex gap-2">
-                <input type="text" value={text} onChange={(e) => setText(e.target.value)}
-                  placeholder="Type a message..."
-                  className="flex-1 px-4 py-2.5 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
+                <textarea value={text} onChange={(e) => setText(e.target.value)}
+                  placeholder={replyTo ? `Reply to ${replyTo.title}...` : "Type a message..."}
+                  className="flex-1 px-4 py-2.5 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none h-10 max-h-32" />
                 <button type="submit" disabled={sending || !text.trim()}
                   className="px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors">
                   {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
