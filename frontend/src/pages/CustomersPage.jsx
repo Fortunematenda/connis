@@ -153,16 +153,22 @@ export default function CustomersPage() {
                 {paginated.map((c, idx) => {
                   const isOnline = onlineMap[c.username];
                   const isBlocked = !c.active;
-                  const rowClass = isBlocked
-                    ? 'bg-red-50/60 hover:bg-red-50'
+                  const rowStyle = isBlocked
+                    ? { backgroundColor: '#eb3b2f10' } // 10 = ~6% opacity
                     : isOnline
-                      ? 'bg-emerald-50/40 hover:bg-emerald-50/60'
+                      ? { backgroundColor: '#8ad19030' } // 30 = ~19% opacity
+                      : {};
+                  const rowHoverClass = isBlocked
+                    ? 'hover:bg-red-100'
+                    : isOnline
+                      ? 'hover:bg-green-50'
                       : 'hover:bg-gray-50/50';
                   return (
                     <tr
                       key={c.id}
                       onClick={() => navigate(`/customers/${c.id}`)}
-                      className={`border-b last:border-0 cursor-pointer transition-colors group ${rowClass}`}
+                      style={rowStyle}
+                      className={`border-b last:border-0 cursor-pointer transition-colors group ${rowHoverClass}`}
                     >
                     <td className="pl-4 pr-2 py-3 text-xs font-mono text-gray-400">
                       {String(c.seq_id || 0).padStart(3, '0')}
