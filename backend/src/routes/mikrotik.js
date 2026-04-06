@@ -3,7 +3,7 @@ const { body } = require('express-validator');
 const validate = require('../middleware/validate');
 const {
   getStatus, getSessions, getSecrets,
-  getProfilesList, createProfileOnRouter, disconnectUser,
+  getProfilesList, createProfileOnRouter, disconnectUser, syncCustomersFromRouter,
 } = require('../controllers/mikrotikController');
 
 const router = express.Router();
@@ -33,5 +33,8 @@ router.post(
 
 // POST /mikrotik/disconnect/:username — Kick an active session
 router.post('/disconnect/:username', disconnectUser);
+
+// POST /mikrotik/sync-customers — Import PPPoE secrets from router as customers
+router.post('/sync-customers', syncCustomersFromRouter);
 
 module.exports = router;

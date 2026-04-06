@@ -1,4 +1,5 @@
 const mikrotik = require('../services/mikrotik');
+const pool = require('../config/db');
 const { ApiError } = require('../middleware/errorHandler');
 const { getRouterConfigForCompany } = require('../services/routerResolver');
 
@@ -76,4 +77,97 @@ const disconnectUser = async (req, res, next) => {
   }
 };
 
-module.exports = { getStatus, getSessions, getSecrets, getProfilesList, createProfileOnRouter, disconnectUser };
+// POST /mikrotik/sync-customers — Import PPPoE secrets from router as customers
+const syncCustomersFromRouter = async (req, res, next) => {
+  try {
+    const companyId = req.companyId;
+    const routerConfig = await getRouterConfigForCompany(companyId);
+    const secrets = await mikrotik.getPPPoESecrets(routerConfig);
+
+    // Get existing usernames in DB for this company
+    const existingRes = await pool.query(
+      'SELECT username FROM users WHERE company_id = $1', [companyId]
+    );
+    const existingUsernames = new Set(existingRes.rows.map(r => r.username));
+
+    // Get plans to match profiles
+    const plansRes = await pool.query(
+      'SELECT id, name, profile_name FROM plans WHERE company_id = $1', [companyId]
+    );
+    const profileToPlan = {};
+    plansRes.rows.forEach(p => {
+      if (p.profile_name) profileToPlan[p.profile_name] = p.id;
+      profileToPlan[p.name] = p.id;
+    });
+
+    let imported = 0;
+    let skipped = 0;
+    const errors = [];
+
+    for (const secret of secrets) {
+      const username = secret.name;
+      if (!username || existingUsernames.has(username)) {
+        skipped++;
+        continue;
+      }
+
+      try {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+
+          // Insert user
+          const userRes = await client.query(
+            `INSERT INTO users (company_id, username, full_name, password, active, address)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             RETURNING id`,
+            [
+              companyId,
+              username,
+              secret.comment || username,
+              secret.password || '',
+              secret.disabled !== 'true',
+              secret['caller-id'] || null,
+            ]
+          );
+          const userId = userRes.rows[0].id;
+
+          // Match plan by profile name
+          const planId = profileToPlan[secret.profile] || null;
+          if (planId) {
+            await client.query(
+              `INSERT INTO user_plans (user_id, plan_id, active) VALUES ($1, $2, TRUE)
+               ON CONFLICT DO NOTHING`,
+              [userId, planId]
+            );
+          }
+
+          await client.query('COMMIT');
+          imported++;
+          existingUsernames.add(username);
+        } catch (e) {
+          await client.query('ROLLBACK');
+          errors.push(`${username}: ${e.message}`);
+        } finally {
+          client.release();
+        }
+      } catch (e) {
+        errors.push(`${username}: ${e.message}`);
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        total_on_router: secrets.length,
+        imported,
+        skipped,
+        errors: errors.slice(0, 10),
+      },
+    });
+  } catch (err) {
+    next(new ApiError(502, 'Failed to sync from router: ' + err.message));
+  }
+};
+
+module.exports = { getStatus, getSessions, getSecrets, getProfilesList, createProfileOnRouter, disconnectUser, syncCustomersFromRouter };

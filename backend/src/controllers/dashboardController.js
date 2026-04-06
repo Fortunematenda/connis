@@ -60,12 +60,20 @@ const getDashboardStats = async (req, res, next) => {
       `, [companyId]),
     ]);
 
-    // Get online count from session cache (same source as /users/status)
+    // Get online count — only count sessions matching actual DB customers
     let onlineCount = 0;
     try {
       const routerConfig = await getRouterConfigForCompany(companyId);
       const cached = await sessionCache.getSessions(companyId, routerConfig);
-      onlineCount = cached.sessionMap?.size || 0;
+      if (cached.sessionMap?.size > 0) {
+        const usernamesRes = await pool.query(
+          'SELECT username FROM users WHERE company_id = $1', [companyId]
+        );
+        const dbUsernames = new Set(usernamesRes.rows.map(r => r.username));
+        for (const [username] of cached.sessionMap) {
+          if (dbUsernames.has(username)) onlineCount++;
+        }
+      }
     } catch { /* ignore router errors */ }
 
     // Lead breakdown by status

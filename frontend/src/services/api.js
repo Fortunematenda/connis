@@ -268,6 +268,13 @@ export const mikrotikApi = {
     });
     return handleResponse(res);
   },
+
+  syncCustomers: async () => {
+    const res = await authFetch(`${API_BASE}/mikrotik/sync-customers`, {
+      method: 'POST',
+    });
+    return handleResponse(res);
+  },
 };
 
 // ── Plans API ──────────────────────────────────────────────
