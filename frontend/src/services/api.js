@@ -540,11 +540,11 @@ export const messagesApi = {
 // ── Portal API ─────────────────────────────────────────────
 
 export const portalApi = {
-  login: async (credentials) => {
+  login: async (username, password) => {
     const res = await fetch(`${API_BASE}/portal/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials),
+      body: JSON.stringify({ username, password }),
     });
     return handlePortalResponse(res);
   },
