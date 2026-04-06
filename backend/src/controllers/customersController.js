@@ -120,7 +120,7 @@ const getCustomerById = async (req, res, next) => {
 const updateCustomer = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { full_name, email, phone, address, username, active } = req.body;
+    const { full_name, email, phone, address, username, password, active } = req.body;
 
     // Check customer exists and belongs to company
     const existing = await pool.query('SELECT id, username FROM users WHERE id = $1 AND company_id = $2', [id, req.companyId]);
@@ -145,14 +145,26 @@ const updateCustomer = async (req, res, next) => {
         phone = COALESCE($3, phone),
         address = COALESCE($4, address),
         username = COALESCE($5, username),
-        active = COALESCE($6, active),
+        password = COALESCE($6, password),
+        active = COALESCE($7, active),
         updated_at = NOW()
-      WHERE id = $7
-      RETURNING id, username, full_name, email, phone, address, balance, active, updated_at`,
-      [full_name, email, phone, address, username, active, id]
+      WHERE id = $8
+      RETURNING id, username, full_name, email, phone, address, password, balance, active, updated_at`,
+      [full_name, email, phone, address, username, password, active, id]
     );
 
     const updated = result.rows[0];
+
+    // Sync password change to auth strategy (RADIUS or API)
+    if (password) {
+      try {
+        const routerConfig = await getRouterConfigForCompany(req.companyId);
+        const strategy = getStrategy(routerConfig?.authType || 'radius');
+        await strategy.onUserUpdate(oldUsername, { password }, routerConfig);
+      } catch (mkErr) {
+        console.warn(`[CUSTOMER] Password sync failed for ${oldUsername}: ${mkErr.message}`);
+      }
+    }
 
     // Sync active status via auth strategy (RADIUS or API)
     if (active !== undefined && active !== null) {
