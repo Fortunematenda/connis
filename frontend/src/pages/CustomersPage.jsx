@@ -129,7 +129,9 @@ export default function CustomersPage() {
               <thead>
                 <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b bg-gray-50/50">
                   <th className="pl-4 pr-2 py-3 font-medium w-14">ID</th>
-                  <th className="px-3 py-3 font-medium w-20">Connection</th>
+                  <th className="px-3 py-3 font-medium w-24 cursor-pointer" onClick={() => handleSort('active')}>
+                    Connection <SortArrow col="active" />
+                  </th>
                   <th className="px-3 py-3 font-medium cursor-pointer" onClick={() => handleSort('full_name')}>
                     Customer <SortArrow col="full_name" />
                   </th>
@@ -141,9 +143,6 @@ export default function CustomersPage() {
                     Balance <SortArrow col="balance" />
                   </th>
                   <th className="px-3 py-3 font-medium">Phone</th>
-                  <th className="px-3 py-3 font-medium cursor-pointer" onClick={() => handleSort('active')}>
-                    Status <SortArrow col="active" />
-                  </th>
                   <th className="px-3 py-3 font-medium cursor-pointer" onClick={() => handleSort('created_at')}>
                     Added <SortArrow col="created_at" />
                   </th>
@@ -211,13 +210,6 @@ export default function CustomersPage() {
                       </span>
                     </td>
                     <td className="px-3 py-3 text-sm text-gray-600">{c.phone || '—'}</td>
-                    <td className="px-3 py-3">
-                      {c.active ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200/60 px-2 py-0.5 rounded-full">Active</span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-red-600 bg-red-50 ring-1 ring-red-200/60 px-2 py-0.5 rounded-full">Disabled</span>
-                      )}
-                    </td>
                     <td className="px-3 py-3 text-xs text-gray-500 whitespace-nowrap">
                       {fmtDate(c.created_at)}
                     </td>
