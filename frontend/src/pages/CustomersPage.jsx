@@ -23,7 +23,7 @@ export default function CustomersPage() {
       const [custRes, statusRes] = await Promise.all([customersApi.getAll(), usersApi.getStatus()]);
       setCustomers(custRes.data);
       const map = {};
-      (statusRes.data || []).forEach(u => { if (u.is_online) map[u.username] = true; });
+      (statusRes.data || []).forEach(u => { if (u.online) map[u.username] = true; });
       setOnlineMap(map);
     } catch (err) {
       toast.error('Failed to load customers');
