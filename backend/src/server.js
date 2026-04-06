@@ -22,6 +22,8 @@ const dashboardRoutes = require('./routes/dashboard');
 const vouchersRoutes = require('./routes/vouchers');
 const transactionsRoutes = require('./routes/transactions');
 const portalRoutes = require('./routes/portal');
+const notificationsRoutes = require('./routes/notifications');
+const messagesRoutes = require('./routes/messages');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -58,6 +60,8 @@ app.use('/api/documents', protect, documentsRoutes);
 app.use('/api/dashboard', protect, dashboardRoutes);
 app.use('/api/vouchers', protect, vouchersRoutes);
 app.use('/api/transactions', protect, transactionsRoutes);
+app.use('/api/notifications', protect, notificationsRoutes);
+app.use('/api/messages', protect, messagesRoutes);
 
 // ── 404 handler ────────────────────────────────────────────
 app.use((req, res) => {

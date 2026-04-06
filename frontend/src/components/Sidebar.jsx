@@ -8,6 +8,7 @@ import {
   Ticket,
   CheckSquare,
   TicketCheck,
+  MessageSquare,
   Settings,
   LogOut,
 } from 'lucide-react';
@@ -18,6 +19,7 @@ const navItems = [
   { to: '/leads', icon: Target, label: 'Leads Pipeline' },
   { to: '/customers', icon: UserCheck, label: 'Customers' },
   { to: '/tickets', icon: Ticket, label: 'Tickets' },
+  { to: '/messages', icon: MessageSquare, label: 'Messages' },
   { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
   { to: '/plans', icon: Wifi, label: 'Plans' },
   { to: '/vouchers', icon: TicketCheck, label: 'Vouchers' },

@@ -4,6 +4,7 @@ const { generateCustomerToken } = require('../middleware/customerAuth');
 const { getRouterConfigForCompany } = require('../services/routerResolver');
 const sessionCache = require('../services/sessionCache');
 const { checkAndReactivate } = require('../services/billingService');
+const { createNotification } = require('./notificationsController');
 
 // POST /portal/login — Customer login with PPPoE username + password
 const customerLogin = async (req, res, next) => {
@@ -209,6 +210,28 @@ const createTicket = async (req, res, next) => {
        VALUES ($1, $2, $3, $4, $5, 'open') RETURNING *`,
       [req.companyId, req.userId, subject, description, priority || 'medium']
     );
+
+    // Get customer name for notification
+    const userRes = await pool.query('SELECT full_name, username FROM users WHERE id = $1', [req.userId]);
+    const customerName = userRes.rows[0]?.full_name || userRes.rows[0]?.username || 'Customer';
+
+    // Auto-create admin notification
+    await createNotification(
+      req.companyId,
+      'new_ticket',
+      `New ticket from ${customerName}`,
+      subject,
+      `/tickets/${result.rows[0].id}`,
+      result.rows[0].id
+    );
+
+    // Auto-create chat message linked to ticket
+    await pool.query(
+      `INSERT INTO messages (company_id, user_id, content, sender_type, sender_id, ticket_id)
+       VALUES ($1, $2, $3, 'customer', $2, $4)`,
+      [req.companyId, req.userId, `[Ticket] ${subject}\n\n${description}`, result.rows[0].id]
+    );
+
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (err) { next(err); }
 };
@@ -263,4 +286,71 @@ const addTicketComment = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { customerLogin, getMe, getTransactions, redeemVoucher, getTickets, createTicket, getTicketById, addTicketComment };
+// GET /portal/statistics — customer usage stats (sessions, bandwidth)
+const getStatistics = async (req, res, next) => {
+  try {
+    const userId = req.userId;
+    const companyId = req.companyId;
+
+    // Total bandwidth all time
+    const totalRes = await pool.query(
+      `SELECT COALESCE(SUM(upload_bytes), 0) AS total_upload,
+              COALESCE(SUM(download_bytes), 0) AS total_download,
+              COUNT(*) AS total_sessions
+       FROM sessions WHERE user_id = $1 AND company_id = $2`,
+      [userId, companyId]
+    );
+
+    // This month bandwidth
+    const monthRes = await pool.query(
+      `SELECT COALESCE(SUM(upload_bytes), 0) AS month_upload,
+              COALESCE(SUM(download_bytes), 0) AS month_download,
+              COUNT(*) AS month_sessions
+       FROM sessions WHERE user_id = $1 AND company_id = $2
+         AND start_time >= date_trunc('month', NOW())`,
+      [userId, companyId]
+    );
+
+    // Today bandwidth
+    const todayRes = await pool.query(
+      `SELECT COALESCE(SUM(upload_bytes), 0) AS today_upload,
+              COALESCE(SUM(download_bytes), 0) AS today_download,
+              COUNT(*) AS today_sessions
+       FROM sessions WHERE user_id = $1 AND company_id = $2
+         AND start_time >= date_trunc('day', NOW())`,
+      [userId, companyId]
+    );
+
+    // Recent sessions (last 20)
+    const sessionsRes = await pool.query(
+      `SELECT id, framed_ip, start_time, stop_time, upload_bytes, download_bytes, terminate_cause
+       FROM sessions WHERE user_id = $1 AND company_id = $2
+       ORDER BY start_time DESC LIMIT 20`,
+      [userId, companyId]
+    );
+
+    // Daily usage for last 30 days
+    const dailyRes = await pool.query(
+      `SELECT date_trunc('day', start_time)::date AS day,
+              COALESCE(SUM(download_bytes), 0) AS download,
+              COALESCE(SUM(upload_bytes), 0) AS upload
+       FROM sessions WHERE user_id = $1 AND company_id = $2
+         AND start_time >= NOW() - INTERVAL '30 days'
+       GROUP BY day ORDER BY day ASC`,
+      [userId, companyId]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        total: totalRes.rows[0],
+        month: monthRes.rows[0],
+        today: todayRes.rows[0],
+        recent_sessions: sessionsRes.rows,
+        daily_usage: dailyRes.rows,
+      },
+    });
+  } catch (err) { next(err); }
+};
+
+module.exports = { customerLogin, getMe, getTransactions, redeemVoucher, getTickets, createTicket, getTicketById, addTicketComment, getStatistics };

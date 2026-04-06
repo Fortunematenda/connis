@@ -13,6 +13,7 @@ import TasksPage from './pages/TasksPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import VouchersPage from './pages/VouchersPage';
+import MessagesPage from './pages/MessagesPage';
 import PortalLogin from './pages/portal/PortalLogin';
 import PortalLayout from './components/portal/PortalLayout';
 import PortalDashboard from './pages/portal/PortalDashboard';
@@ -20,6 +21,8 @@ import PortalServices from './pages/portal/PortalServices';
 import PortalFinance from './pages/portal/PortalFinance';
 import PortalTickets from './pages/portal/PortalTickets';
 import PortalProfile from './pages/portal/PortalProfile';
+import PortalStatistics from './pages/portal/PortalStatistics';
+import PortalChat from './pages/portal/PortalChat';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -49,6 +52,8 @@ export default function App() {
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/plans" element={<PlansPage />} />
         <Route path="/vouchers" element={<VouchersPage />} />
+        <Route path="/messages" element={<MessagesPage />} />
+        <Route path="/messages/:userId" element={<MessagesPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
       {/* Customer Portal — separate from admin */}
@@ -58,6 +63,8 @@ export default function App() {
         <Route path="services" element={<PortalServices />} />
         <Route path="finance" element={<PortalFinance />} />
         <Route path="tickets" element={<PortalTickets />} />
+        <Route path="statistics" element={<PortalStatistics />} />
+        <Route path="chat" element={<PortalChat />} />
         <Route path="profile" element={<PortalProfile />} />
       </Route>
     </Routes>

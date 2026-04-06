@@ -487,6 +487,48 @@ const handlePortalResponse = async (response) => {
   return data;
 };
 
+// ── Notifications (admin) ──
+export const notificationsApi = {
+  getAll: async (limit = 30, unreadOnly = false) => {
+    const res = await authFetch(`${API_BASE}/notifications?limit=${limit}${unreadOnly ? '&unread_only=true' : ''}`);
+    return handleResponse(res);
+  },
+  getUnreadCount: async () => {
+    const res = await authFetch(`${API_BASE}/notifications/unread-count`);
+    return handleResponse(res);
+  },
+  markRead: async (id) => {
+    const res = await authFetch(`${API_BASE}/notifications/${id}/read`, { method: 'PUT' });
+    return handleResponse(res);
+  },
+  markAllRead: async () => {
+    const res = await authFetch(`${API_BASE}/notifications/read-all`, { method: 'PUT' });
+    return handleResponse(res);
+  },
+};
+
+// ── Messages / Chat (admin) ──
+export const messagesApi = {
+  getConversations: async () => {
+    const res = await authFetch(`${API_BASE}/messages/conversations`);
+    return handleResponse(res);
+  },
+  getMessages: async (userId, limit = 50) => {
+    const res = await authFetch(`${API_BASE}/messages/${userId}?limit=${limit}`);
+    return handleResponse(res);
+  },
+  send: async (userId, content, ticketId) => {
+    const res = await authFetch(`${API_BASE}/messages/${userId}`, {
+      method: 'POST', body: JSON.stringify({ content, ticket_id: ticketId }),
+    });
+    return handleResponse(res);
+  },
+  getUnreadCount: async () => {
+    const res = await authFetch(`${API_BASE}/messages/unread-count`);
+    return handleResponse(res);
+  },
+};
+
 export const portalApi = {
   login: async (username, password) => {
     const res = await fetch(`${API_BASE}/portal/login`, {
@@ -528,6 +570,24 @@ export const portalApi = {
     const res = await portalFetch(`${API_BASE}/portal/tickets/${id}/comments`, {
       method: 'POST', body: JSON.stringify({ content }),
     });
+    return handlePortalResponse(res);
+  },
+  getStatistics: async () => {
+    const res = await portalFetch(`${API_BASE}/portal/statistics`);
+    return handlePortalResponse(res);
+  },
+  getMessages: async () => {
+    const res = await portalFetch(`${API_BASE}/portal/messages`);
+    return handlePortalResponse(res);
+  },
+  sendMessage: async (content, ticketId) => {
+    const res = await portalFetch(`${API_BASE}/portal/messages`, {
+      method: 'POST', body: JSON.stringify({ content, ticket_id: ticketId }),
+    });
+    return handlePortalResponse(res);
+  },
+  getUnreadMessages: async () => {
+    const res = await portalFetch(`${API_BASE}/portal/messages/unread-count`);
     return handlePortalResponse(res);
   },
 };

@@ -114,6 +114,43 @@ CREATE INDEX IF NOT EXISTS idx_vouchers_company ON vouchers(company_id);
 CREATE INDEX IF NOT EXISTS idx_vouchers_code ON vouchers(code);
 
 -- ============================================================
+-- 13. NOTIFICATIONS — admin notifications per company
+-- ============================================================
+CREATE TABLE IF NOT EXISTS notifications (
+  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  company_id    UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  type          VARCHAR(50) NOT NULL,
+  title         VARCHAR(300) NOT NULL,
+  body          TEXT,
+  link          VARCHAR(500),
+  is_read       BOOLEAN DEFAULT FALSE,
+  ref_id        UUID,
+  created_at    TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_company ON notifications(company_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(company_id, is_read) WHERE is_read = FALSE;
+
+-- ============================================================
+-- 14. MESSAGES — chat messages between admin and customers
+-- ============================================================
+CREATE TABLE IF NOT EXISTS messages (
+  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  company_id    UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  ticket_id     UUID REFERENCES tickets(id) ON DELETE SET NULL,
+  content       TEXT NOT NULL,
+  sender_type   VARCHAR(10) NOT NULL CHECK (sender_type IN ('admin', 'customer')),
+  sender_id     UUID,
+  is_read       BOOLEAN DEFAULT FALSE,
+  created_at    TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_user ON messages(user_id);
+CREATE INDEX IF NOT EXISTS idx_messages_company ON messages(company_id);
+CREATE INDEX IF NOT EXISTS idx_messages_ticket ON messages(ticket_id);
+
+-- ============================================================
 -- 1. USERS — ISP subscribers / customers (per company)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS users (

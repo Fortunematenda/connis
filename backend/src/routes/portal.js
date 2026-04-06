@@ -2,8 +2,9 @@ const express = require('express');
 const { authenticateCustomer } = require('../middleware/customerAuth');
 const {
   customerLogin, getMe, getTransactions, redeemVoucher,
-  getTickets, createTicket, getTicketById, addTicketComment,
+  getTickets, createTicket, getTicketById, addTicketComment, getStatistics,
 } = require('../controllers/portalController');
+const { getCustomerMessages, sendCustomerMessage, getCustomerUnreadCount } = require('../controllers/messagesController');
 
 const router = express.Router();
 
@@ -14,9 +15,13 @@ router.post('/login', customerLogin);
 router.get('/me', authenticateCustomer, getMe);
 router.get('/transactions', authenticateCustomer, getTransactions);
 router.post('/redeem', authenticateCustomer, redeemVoucher);
+router.get('/statistics', authenticateCustomer, getStatistics);
 router.get('/tickets', authenticateCustomer, getTickets);
 router.post('/tickets', authenticateCustomer, createTicket);
 router.get('/tickets/:id', authenticateCustomer, getTicketById);
 router.post('/tickets/:id/comments', authenticateCustomer, addTicketComment);
+router.get('/messages', authenticateCustomer, getCustomerMessages);
+router.post('/messages', authenticateCustomer, sendCustomerMessage);
+router.get('/messages/unread-count', authenticateCustomer, getCustomerUnreadCount);
 
 module.exports = router;

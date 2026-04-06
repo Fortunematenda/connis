@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import {
   LayoutDashboard, Wifi, Wallet, TicketCheck, Headphones,
-  User, LogOut, Menu, X, ChevronRight,
+  User, LogOut, Menu, X, ChevronRight, BarChart3, MessageSquare,
 } from 'lucide-react';
 import { portalApi } from '../../services/api';
 
@@ -10,7 +10,9 @@ const navItems = [
   { to: '/portal', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/portal/services', icon: Wifi, label: 'My Services' },
   { to: '/portal/finance', icon: Wallet, label: 'Finance' },
+  { to: '/portal/statistics', icon: BarChart3, label: 'Usage Stats' },
   { to: '/portal/tickets', icon: Headphones, label: 'Support' },
+  { to: '/portal/chat', icon: MessageSquare, label: 'Chat' },
   { to: '/portal/profile', icon: User, label: 'My Profile' },
 ];
 

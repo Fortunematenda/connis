@@ -5,7 +5,7 @@ import {
   Coins, ArrowRight, ArrowUpRight, Loader2,
   AlertTriangle, Clock, BarChart3, Ban, Power,
 } from 'lucide-react';
-import { dashboardApi } from '../services/api';
+import { dashboardApi, notificationsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '—';
@@ -41,12 +41,17 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [bandwidthPeriod, setBandwidthPeriod] = useState('month');
+  const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await dashboardApi.getStats(bandwidthPeriod);
+        const [res, nRes] = await Promise.all([
+          dashboardApi.getStats(bandwidthPeriod),
+          notificationsApi.getAll(8),
+        ]);
         setData(res.data);
+        setNotifications(nRes.data);
       } catch { /* ignore */ }
       setLoading(false);
     };
@@ -274,8 +279,35 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Breakdowns */}
+        {/* Notifications + Breakdowns */}
         <div className="space-y-5">
+          {/* Recent Notifications */}
+          {notifications.length > 0 && (
+            <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-800">Recent Notifications</h3>
+              </div>
+              <div className="divide-y">
+                {notifications.slice(0, 5).map((n) => (
+                  <div key={n.id} onClick={() => n.link && navigate(n.link)}
+                    className={`px-5 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors ${!n.is_read ? 'bg-blue-50/30' : ''}`}>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                      n.type === 'new_ticket' ? 'bg-orange-50 text-orange-500' :
+                      n.type === 'new_message' ? 'bg-blue-50 text-blue-500' : 'bg-gray-100 text-gray-400'
+                    }`}>
+                      {n.type === 'new_ticket' ? <Ticket size={12} /> : <Target size={12} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm truncate ${!n.is_read ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>{n.title}</p>
+                      {n.body && <p className="text-[11px] text-gray-400 truncate">{n.body}</p>}
+                    </div>
+                    {!n.is_read && <span className="w-2 h-2 bg-blue-500 rounded-full shrink-0" />}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Ticket Breakdown */}
           {data?.ticket_breakdown && Object.keys(data.ticket_breakdown).length > 0 && (
             <div className="bg-white rounded-xl border shadow-sm p-5">
