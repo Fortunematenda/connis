@@ -319,6 +319,34 @@ export default function CustomerDetailPage() {
                 </div>
               )}
             </Card>
+
+            {/* Portal Access */}
+            <Card title="Customer Portal Access" icon={<Globe size={14} className="text-blue-500" />}>
+              <div className="space-y-3">
+                <div>
+                  <div className="text-[11px] text-gray-400 mb-1">Portal URL</div>
+                  <div className="flex items-center gap-2">
+                    <code className="text-sm font-mono text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200/50 break-all">
+                      {window.location.origin}/portal/login
+                    </code>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] text-gray-400 mb-1">Login: same PPPoE credentials above</div>
+                </div>
+                <button
+                  onClick={() => {
+                    const portalUrl = `${window.location.origin}/portal/login`;
+                    const text = `Your internet portal login:\n\nURL: ${portalUrl}\nUsername: ${customer.username}\nPassword: ${customer.password || '(ask your ISP)'}\n\nUse this portal to check your balance, redeem vouchers, and contact support.`;
+                    navigator.clipboard.writeText(text);
+                    toast.success('Portal credentials copied! Ready to send to client.');
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                >
+                  <Copy size={14} /> Copy Login Details for Client
+                </button>
+              </div>
+            </Card>
           </div>
 
           {/* Right: Plan + Balance + Actions (2 cols) */}
