@@ -5,19 +5,25 @@ import toast from 'react-hot-toast';
 import { portalApi } from '../../services/api';
 
 const fmtTime = (d) => d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
-const isImage = (url) => url && /\.(jpg|jpeg|png|gif|webp|heic|heif)$/i.test(url);
+const isImage = (url) => url && /\.(jpg|jpeg|png|gif|webp|heic|heif)/i.test(url);
+const fixUrl = (url) => {
+  if (!url) return url;
+  if (url.startsWith('/uploads/')) return '/api' + url;
+  return url;
+};
 
 function ChatAttachment({ url, isMe }) {
-  if (!url) return null;
-  if (isImage(url)) {
+  const src = fixUrl(url);
+  if (!src) return null;
+  if (isImage(src)) {
     return (
-      <a href={url} target="_blank" rel="noopener noreferrer" className="block mt-1">
-        <img src={url} alt="attachment" className={`max-w-[220px] max-h-[200px] rounded-lg border ${isMe ? 'border-blue-400/30' : 'border-gray-200'} object-cover`} />
+      <a href={src} target="_blank" rel="noopener noreferrer" className="block mt-1">
+        <img src={src} alt="attachment" className={`max-w-[220px] max-h-[200px] rounded-lg border ${isMe ? 'border-blue-400/30' : 'border-gray-200'} object-cover`} />
       </a>
     );
   }
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer"
+    <a href={src} target="_blank" rel="noopener noreferrer"
       className={`flex items-center gap-1.5 mt-1 text-xs underline ${isMe ? 'text-blue-100' : 'text-blue-600'}`}>
       <Paperclip size={12} /> View attachment
     </a>

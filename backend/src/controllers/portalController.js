@@ -292,12 +292,12 @@ const getStatistics = async (req, res, next) => {
     const userId = req.userId;
     const companyId = req.companyId;
 
-    // Total bandwidth all time
+    // Total bandwidth all time (company_id may be NULL on older sessions)
     const totalRes = await pool.query(
       `SELECT COALESCE(SUM(upload_bytes), 0) AS total_upload,
               COALESCE(SUM(download_bytes), 0) AS total_download,
               COUNT(*) AS total_sessions
-       FROM sessions WHERE user_id = $1 AND company_id = $2`,
+       FROM sessions WHERE user_id = $1 AND (company_id = $2 OR company_id IS NULL)`,
       [userId, companyId]
     );
 
@@ -306,7 +306,7 @@ const getStatistics = async (req, res, next) => {
       `SELECT COALESCE(SUM(upload_bytes), 0) AS month_upload,
               COALESCE(SUM(download_bytes), 0) AS month_download,
               COUNT(*) AS month_sessions
-       FROM sessions WHERE user_id = $1 AND company_id = $2
+       FROM sessions WHERE user_id = $1 AND (company_id = $2 OR company_id IS NULL)
          AND start_time >= date_trunc('month', NOW())`,
       [userId, companyId]
     );
@@ -316,7 +316,7 @@ const getStatistics = async (req, res, next) => {
       `SELECT COALESCE(SUM(upload_bytes), 0) AS today_upload,
               COALESCE(SUM(download_bytes), 0) AS today_download,
               COUNT(*) AS today_sessions
-       FROM sessions WHERE user_id = $1 AND company_id = $2
+       FROM sessions WHERE user_id = $1 AND (company_id = $2 OR company_id IS NULL)
          AND start_time >= date_trunc('day', NOW())`,
       [userId, companyId]
     );
@@ -324,7 +324,7 @@ const getStatistics = async (req, res, next) => {
     // Recent sessions (last 20)
     const sessionsRes = await pool.query(
       `SELECT id, framed_ip, start_time, stop_time, upload_bytes, download_bytes, terminate_cause
-       FROM sessions WHERE user_id = $1 AND company_id = $2
+       FROM sessions WHERE user_id = $1 AND (company_id = $2 OR company_id IS NULL)
        ORDER BY start_time DESC LIMIT 20`,
       [userId, companyId]
     );
@@ -334,7 +334,7 @@ const getStatistics = async (req, res, next) => {
       `SELECT date_trunc('day', start_time)::date AS day,
               COALESCE(SUM(download_bytes), 0) AS download,
               COALESCE(SUM(upload_bytes), 0) AS upload
-       FROM sessions WHERE user_id = $1 AND company_id = $2
+       FROM sessions WHERE user_id = $1 AND (company_id = $2 OR company_id IS NULL)
          AND start_time >= NOW() - INTERVAL '30 days'
        GROUP BY day ORDER BY day ASC`,
       [userId, companyId]

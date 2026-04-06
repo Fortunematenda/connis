@@ -45,7 +45,7 @@ router.post('/messages', authenticateCustomer, sendCustomerMessage);
 router.get('/messages/unread-count', authenticateCustomer, getCustomerUnreadCount);
 router.post('/upload', authenticateCustomer, upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
-  const url = `/uploads/chat/${req.file.filename}`;
+  const url = `/api/uploads/chat/${req.file.filename}`;
   res.json({ success: true, data: { url, filename: req.file.originalname } });
 });
 

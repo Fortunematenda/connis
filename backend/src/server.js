@@ -35,7 +35,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // ── Health check ───────────────────────────────────────────
 app.get('/api/health', (req, res) => {
