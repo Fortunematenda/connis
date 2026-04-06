@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
   ArrowDownCircle, ArrowUpCircle, Loader2, TicketCheck, Wallet,
-  Filter, Download,
+  Filter, Download, CreditCard, Building,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { portalApi } from '../../services/api';
@@ -15,31 +15,19 @@ export default function PortalFinance() {
   const { user, refreshUser } = useOutletContext();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [voucherCode, setVoucherCode] = useState('');
-  const [redeeming, setRedeeming] = useState(false);
+  const [company, setCompany] = useState(null);
+  const [companyLoading, setCompanyLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    portalApi.getTransactions(100).then(res => setTransactions(res.data)).catch(() => {}).finally(() => setLoading(false));
+    Promise.all([
+      portalApi.getTransactions(100).then(res => setTransactions(res.data)).catch(() => {}),
+      portalApi.getCompany().then(res => setCompany(res.data)).catch(() => {})
+    ]).finally(() => {
+      setLoading(false);
+      setCompanyLoading(false);
+    });
   }, []);
-
-  const handleRedeem = async (e) => {
-    e.preventDefault();
-    if (!voucherCode.trim()) return;
-    setRedeeming(true);
-    try {
-      const res = await portalApi.redeemVoucher(voucherCode.trim());
-      toast.success(`Voucher redeemed! +${fmtCurrency(res.data.amount)}`);
-      setVoucherCode('');
-      await refreshUser();
-      const txRes = await portalApi.getTransactions(100);
-      setTransactions(txRes.data);
-    } catch (err) {
-      toast.error(err.message || 'Invalid voucher');
-    } finally {
-      setRedeeming(false);
-    }
-  };
 
   const filtered = filter === 'all' ? transactions : transactions.filter(t => t.type === filter);
 
@@ -79,31 +67,48 @@ export default function PortalFinance() {
         </div>
       </div>
 
-      {/* Redeem Voucher */}
+      {/* Payment Options */}
       <div className="bg-white rounded-xl border p-4">
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-            <TicketCheck size={16} className="text-blue-600" />
+          <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+            <CreditCard size={16} className="text-green-600" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-gray-800">Redeem Voucher</h3>
-            <p className="text-[11px] text-gray-400">Enter your prepaid voucher code to add balance</p>
+            <h3 className="text-sm font-semibold text-gray-800">Payment Options</h3>
+            <p className="text-[11px] text-gray-400">Make payments to keep your account active</p>
           </div>
         </div>
-        <form onSubmit={handleRedeem} className="flex gap-2">
-          <input
-            type="text"
-            value={voucherCode}
-            onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-            placeholder="VCH-XXXX-XXXX"
-            className="flex-1 px-3.5 py-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 font-mono tracking-wider"
-          />
-          <button type="submit" disabled={redeeming || !voucherCode.trim()}
-            className="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap flex items-center gap-2">
-            {redeeming ? <Loader2 size={14} className="animate-spin" /> : <TicketCheck size={14} />}
-            {redeeming ? 'Redeeming...' : 'Redeem'}
-          </button>
-        </form>
+        {companyLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 size={20} className="animate-spin text-blue-500" />
+          </div>
+        ) : company?.bank_details ? (
+          <div className="space-y-3">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Building size={16} className="text-gray-600" />
+                <h4 className="text-sm font-semibold text-gray-800">{company.name}</h4>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500 font-medium mb-2">Bank Transfer Details:</p>
+                <pre className="text-sm text-gray-700 bg-white rounded p-3 border border-gray-200 whitespace-pre-wrap font-mono">
+                  {company.bank_details}
+                </pre>
+              </div>
+            </div>
+            <div className="bg-blue-50 rounded-lg p-3">
+              <p className="text-xs text-blue-700 font-medium">
+                <strong>Important:</strong> When making payment, please use your account name <span className="bg-blue-100 px-2 py-0.5 rounded font-mono">{user?.username}</span> as reference.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <CreditCard size={32} className="text-gray-300 mx-auto mb-3" />
+            <p className="text-sm text-gray-400">No payment details available</p>
+            <p className="text-xs text-gray-300 mt-1">Contact support for payment information</p>
+          </div>
+        )}
       </div>
 
       {/* Transaction History */}
