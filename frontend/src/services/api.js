@@ -546,30 +546,30 @@ export const portalApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials),
     });
-    return handleResponse(res);
+    return handlePortalResponse(res);
   },
 
   getMe: async () => {
-    const res = await authFetch(`${API_BASE}/portal/me`);
-    return handleResponse(res);
+    const res = await portalFetch(`${API_BASE}/portal/me`);
+    return handlePortalResponse(res);
   },
 
   getTransactions: async (limit = 50) => {
-    const res = await authFetch(`${API_BASE}/portal/transactions?limit=${limit}`);
-    return handleResponse(res);
+    const res = await portalFetch(`${API_BASE}/portal/transactions?limit=${limit}`);
+    return handlePortalResponse(res);
   },
 
   getCompany: async () => {
-    const res = await authFetch(`${API_BASE}/portal/company`);
-    return handleResponse(res);
+    const res = await portalFetch(`${API_BASE}/portal/company`);
+    return handlePortalResponse(res);
   },
 
   redeemVoucher: async (code) => {
-    const res = await authFetch(`${API_BASE}/portal/redeem`, {
+    const res = await portalFetch(`${API_BASE}/portal/redeem`, {
       method: 'POST',
       body: JSON.stringify({ code }),
     });
-    return handleResponse(res);
+    return handlePortalResponse(res);
   },
 getTickets: async () => {
     const res = await portalFetch(`${API_BASE}/portal/tickets`);
