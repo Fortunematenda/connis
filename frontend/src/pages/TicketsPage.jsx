@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Ticket, Plus, X, Loader2, Search, RefreshCw, ChevronLeft, ChevronRight,
   AlertCircle, Clock, CheckCircle2, Hourglass, MessageCircle, Eye, Trash2,
@@ -71,7 +71,16 @@ export default function TicketsPage() {
     setLoading(false);
   }, []);
 
+  const { id: urlTicketId } = useParams();
+
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Auto-load ticket detail if navigated via URL /tickets/:id
+  useEffect(() => {
+    if (urlTicketId && !loading) {
+      loadDetail(urlTicketId);
+    }
+  }, [urlTicketId, loading]);
 
   const loadDetail = async (id) => {
     try {
