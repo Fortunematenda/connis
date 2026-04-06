@@ -6,7 +6,7 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3004;
-const API_TARGET = process.env.API_URL || 'http://localhost:5000';
+const API_TARGET = process.env.API_URL || 'http://localhost:5001';
 
 // Proxy /api requests to backend
 app.use('/api', createProxyMiddleware({
