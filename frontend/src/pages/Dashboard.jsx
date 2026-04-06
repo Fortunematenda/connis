@@ -221,6 +221,9 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-800">Recent Tickets</h3>
+            <Link to="/tickets" className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
+              View all <ArrowRight size={12} />
+            </Link>
           </div>
           {data?.recent_tickets?.length > 0 ? (
             <div className="divide-y">
