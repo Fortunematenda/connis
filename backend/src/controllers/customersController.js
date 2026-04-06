@@ -274,4 +274,31 @@ const cancelPendingPlan = async (req, res, next) => {
   }
 };
 
-module.exports = { getCustomers, getCustomerById, updateCustomer, changeCustomerPlan, cancelPendingPlan };
+// DELETE /customers/:id — Delete customer
+const deleteCustomer = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Check if customer exists and belongs to company
+    const existing = await pool.query('SELECT id, username FROM users WHERE id = $1 AND company_id = $2', [id, req.companyId]);
+    if (existing.rows.length === 0) {
+      throw new ApiError(404, 'Customer not found');
+    }
+
+    // Delete related records first (cascade manually)
+    await pool.query('DELETE FROM user_plans WHERE user_id = $1', [id]);
+    await pool.query('DELETE FROM payments WHERE user_id = $1', [id]);
+    await pool.query('DELETE FROM sessions WHERE user_id = $1', [id]);
+    await pool.query('DELETE FROM documents WHERE user_id = $1', [id]);
+    await pool.query('DELETE FROM tickets WHERE user_id = $1', [id]);
+
+    // Delete the customer
+    await pool.query('DELETE FROM users WHERE id = $1 AND company_id = $2', [id, req.companyId]);
+
+    res.json({ success: true, message: 'Customer deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getCustomers, getCustomerById, updateCustomer, deleteCustomer, changeCustomerPlan, cancelPendingPlan };

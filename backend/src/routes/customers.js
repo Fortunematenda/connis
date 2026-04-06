@@ -1,7 +1,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const validate = require('../middleware/validate');
-const { getCustomers, getCustomerById, updateCustomer, changeCustomerPlan, cancelPendingPlan } = require('../controllers/customersController');
+const { getCustomers, getCustomerById, updateCustomer, deleteCustomer, changeCustomerPlan, cancelPendingPlan } = require('../controllers/customersController');
 const { getCustomerStatistics, getLiveBandwidth } = require('../controllers/statisticsController');
 
 const router = express.Router();
@@ -39,6 +39,9 @@ router.put(
 
 // DELETE /customers/:id/plan/pending — Cancel pending plan change
 router.delete('/:id/plan/pending', cancelPendingPlan);
+
+// DELETE /customers/:id — Delete customer
+router.delete('/:id', deleteCustomer);
 
 // GET /customers/:id/statistics — RADIUS accounting statistics
 router.get('/:id/statistics', getCustomerStatistics);
