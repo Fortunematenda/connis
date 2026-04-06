@@ -118,7 +118,7 @@ export default function NetworkPage() {
           <p className="text-sm text-gray-500 mt-1">Manage your MikroTik routers and network configuration</p>
         </div>
         <button onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-blue-700 flex items-center gap-2 text-sm font-medium transition shadow-sm">
+          className="bg-amber-500/90 text-white px-4 py-2.5 rounded-xl hover:bg-amber-600 flex items-center gap-2 text-sm font-medium transition shadow-sm">
           <Plus size={16} /> Add Router
         </button>
       </div>
@@ -190,7 +190,7 @@ export default function NetworkPage() {
             </div>
             <div className="flex gap-2 pt-2">
               <button type="submit" disabled={saving}
-                className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium transition">
+                className="bg-amber-500/90 text-white px-5 py-2 rounded-lg hover:bg-amber-600 disabled:opacity-50 text-sm font-medium transition">
                 {saving ? 'Saving...' : 'Save Router'}
               </button>
               <button type="button" onClick={() => setShowForm(false)}
@@ -280,7 +280,7 @@ export default function NetworkPage() {
                       </div>
                       <div className="flex gap-2">
                         <button onClick={saveEdit} disabled={editSaving}
-                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium flex items-center gap-1.5 transition">
+                          className="bg-amber-500/90 text-white px-4 py-2 rounded-lg hover:bg-amber-600 disabled:opacity-50 text-sm font-medium flex items-center gap-1.5 transition">
                           <Check size={14} /> {editSaving ? 'Saving...' : 'Save'}
                         </button>
                         <button onClick={cancelEdit}

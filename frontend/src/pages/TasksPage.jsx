@@ -273,7 +273,7 @@ export default function TasksPage() {
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
           <button onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm">
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 shadow-sm">
             <Plus size={14} /> Add Task
           </button>
         </div>
@@ -332,7 +332,7 @@ export default function TasksPage() {
             </div>
             <div className="flex justify-end gap-2 pt-3 border-t">
               <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">Cancel</button>
-              <button onClick={handleCreate} className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">Save</button>
+              <button onClick={handleCreate} className="px-5 py-2 bg-amber-500/90 text-white text-sm font-medium rounded-lg hover:bg-amber-600">Save</button>
             </div>
           </div>
         </div>
@@ -390,7 +390,7 @@ export default function TasksPage() {
                         </thead>
                         <tbody>
                           {myTasks.map((t, idx) => (
-                            <tr key={t.id} className="border-b last:border-0 hover:bg-blue-50/30 transition-colors">
+                            <tr key={t.id} onClick={() => loadDetail(t.id)} className="border-b last:border-0 hover:bg-blue-50/30 transition-colors cursor-pointer">
                               <td className="pl-4 pr-2 py-2.5 text-xs font-mono text-gray-400">{idx + 1}</td>
                               <td className="px-3 py-2.5">
                                 <p className="font-medium text-blue-700 truncate max-w-xs">{t.title}</p>
@@ -457,7 +457,7 @@ export default function TasksPage() {
                         <AlertTriangle size={14} /> Overdue ({overdueTasks.length})
                       </h3>
                       {overdueTasks.slice(0, 5).map(t => (
-                        <div key={t.id} className="text-xs text-red-600">
+                        <div key={t.id} onClick={() => loadDetail(t.id)} className="text-xs text-red-600 cursor-pointer hover:underline">
                           <span className="font-medium">{t.title}</span>
                           <span className="text-red-400"> — due {fmtDate(t.due_date)}</span>
                         </div>
@@ -526,7 +526,7 @@ export default function TasksPage() {
                       </thead>
                       <tbody>
                         {paginated.map((t, idx) => (
-                          <tr key={t.id} className={`border-b last:border-0 hover:bg-blue-50/30 transition-colors ${isOverdue(t.due_date, t.status) ? 'bg-red-50/30' : ''}`}>
+                          <tr key={t.id} onClick={() => loadDetail(t.id)} className={`border-b last:border-0 hover:bg-blue-50/30 transition-colors cursor-pointer ${isOverdue(t.due_date, t.status) ? 'bg-red-50/30' : ''}`}>
                             <td className="pl-4 pr-2 py-3 text-xs font-mono text-gray-400">{(page - 1) * perPage + idx + 1}</td>
                             <td className="px-3 py-3">
                               <button onClick={() => loadDetail(t.id)} className="text-left">
@@ -581,28 +581,20 @@ export default function TasksPage() {
                   <div className="md:hidden divide-y">
                     {paginated.map((t) => (
                       <button key={t.id} onClick={() => loadDetail(t.id)}
-                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors ${isOverdue(t.due_date, t.status) ? 'bg-red-50/30' : ''}`}>
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-900 truncate">{t.title}</p>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                              {t.assigned_name || 'Unassigned'}{t.customer_name ? ` · ${t.customer_name}` : ''}
-                            </p>
+                        className={`w-full px-4 py-2.5 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors ${isOverdue(t.due_date, t.status) ? 'bg-red-50/30' : ''}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_META[t.status]?.dot || 'bg-gray-400'}`} />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-900 truncate">{t.title}</p>
+                              <p className="text-[11px] text-gray-400">
+                                {t.assigned_name || 'Unassigned'}{t.customer_name ? ` · ${t.customer_name}` : ''}{t.due_date ? ` · ${fmtDate(t.due_date)}` : ''}
+                              </p>
+                            </div>
                           </div>
                           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${PRIORITY_META[t.priority]?.color || ''}`}>
                             {PRIORITY_META[t.priority]?.label || t.priority}
                           </span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded ${STATUS_META[t.status]?.color || 'bg-gray-100'}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_META[t.status]?.dot || 'bg-gray-400'}`} />
-                            {STATUS_META[t.status]?.label || t.status}
-                          </span>
-                          {t.due_date && (
-                            <span className={`text-[10px] flex items-center gap-0.5 ${isOverdue(t.due_date, t.status) ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
-                              <Calendar size={10} /> {fmtDate(t.due_date)}
-                            </span>
-                          )}
                         </div>
                       </button>
                     ))}
@@ -623,7 +615,7 @@ export default function TasksPage() {
                         if (p < 1 || p > totalPages) return null;
                         return (
                           <button key={p} onClick={() => setPage(p)}
-                            className={`px-3 py-1.5 border rounded text-xs ${p === page ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-50'}`}>
+                            className={`px-3 py-1.5 border rounded text-xs ${p === page ? 'bg-amber-500/90 text-white border-amber-500' : 'hover:bg-gray-50'}`}>
                             {p}
                           </button>
                         );

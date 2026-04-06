@@ -53,7 +53,7 @@ export default function PortalDashboard() {
       {/* Status Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* Balance */}
-        <div className={`rounded-xl p-4 text-white ${balance > 0 ? 'bg-gradient-to-br from-blue-600 to-indigo-600' : 'bg-gradient-to-br from-red-500 to-red-600'}`}>
+        <div className={`rounded-xl p-4 text-white ${balance > 0 ? 'bg-gradient-to-br from-[#2d2e50] to-indigo-700' : 'bg-gradient-to-br from-red-500 to-red-600'}`}>
           <div className="flex items-center justify-between">
             <p className="text-xs uppercase tracking-wider opacity-70">Balance</p>
             <Wallet size={16} className="opacity-40" />
@@ -94,8 +94,8 @@ export default function PortalDashboard() {
         {/* Redeem Voucher */}
         <div className="bg-white rounded-xl border p-4">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-              <TicketCheck size={16} className="text-blue-600" />
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+              <TicketCheck size={16} className="text-indigo-600" />
             </div>
             <h3 className="text-sm font-semibold text-gray-800">Redeem Voucher</h3>
           </div>
@@ -105,10 +105,10 @@ export default function PortalDashboard() {
               value={voucherCode}
               onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
               placeholder="VCH-XXXX-XXXX"
-              className="w-full px-3.5 py-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 font-mono tracking-wider"
+              className="w-full px-3.5 py-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 font-mono tracking-wider"
             />
             <button type="submit" disabled={redeeming || !voucherCode.trim()}
-              className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors">
+              className="w-full py-2.5 bg-[#2d2e50] text-white rounded-lg text-sm font-semibold hover:bg-[#3d3e60] disabled:opacity-50 transition-colors">
               {redeeming ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Redeem'}
             </button>
           </form>
@@ -119,7 +119,7 @@ export default function PortalDashboard() {
           <h3 className="text-sm font-semibold text-gray-800 mb-3">Quick Links</h3>
           <Link to="/portal/services" className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-50 text-sm text-gray-600 group">
             <div className="flex items-center gap-2.5">
-              <Wifi size={16} className="text-blue-500" /> View my services
+              <Wifi size={16} className="text-indigo-500" /> View my services
             </div>
             <ChevronRight size={14} className="text-gray-300 group-hover:text-gray-500" />
           </Link>
@@ -142,12 +142,12 @@ export default function PortalDashboard() {
       <div className="bg-white rounded-xl border overflow-hidden">
         <div className="px-4 py-3 border-b flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-800">Recent Transactions</h3>
-          <Link to="/portal/finance" className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
+          <Link to="/portal/finance" className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
             View all <ChevronRight size={12} />
           </Link>
         </div>
         {loading ? (
-          <div className="flex items-center justify-center h-32"><Loader2 size={20} className="animate-spin text-blue-500" /></div>
+          <div className="flex items-center justify-center h-32"><Loader2 size={20} className="animate-spin text-indigo-500" /></div>
         ) : transactions.length > 0 ? (
           <div className="divide-y">
             {transactions.map((tx) => (

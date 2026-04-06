@@ -101,7 +101,7 @@ export default function VouchersPage() {
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
           <button onClick={() => setShowGenerate(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm">
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 shadow-sm">
             <Plus size={14} /> Generate
           </button>
         </div>
@@ -129,7 +129,7 @@ export default function VouchersPage() {
               <button onClick={() => setShowGenerate(false)}
                 className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
               <button onClick={handleGenerate} disabled={generating}
-                className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+                className="px-5 py-2 text-sm font-semibold text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 disabled:opacity-50 flex items-center gap-2">
                 {generating ? <><Loader2 size={14} className="animate-spin" /> Generating...</> : <><TicketCheck size={14} /> Generate</>}
               </button>
             </div>

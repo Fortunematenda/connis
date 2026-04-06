@@ -178,7 +178,7 @@ export default function CustomerDetailPage() {
 
   const upd = (f) => (e) => setForm((s) => ({ ...s, [f]: e.target.value }));
 
-  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 size={28} className="animate-spin text-blue-500" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 size={28} className="animate-spin text-indigo-500" /></div>;
   if (!customer) return null;
 
   const online = session?.online || false;
@@ -190,7 +190,7 @@ export default function CustomerDetailPage() {
       <div className="bg-white border-b -mx-4 md:-mx-6 -mt-4 md:-mt-6 px-4 md:px-6 pt-4 pb-0 mb-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-3">
-          <Link to="/customers" className="hover:text-blue-600 transition-colors">Customers</Link>
+          <Link to="/customers" className="hover:text-indigo-600 transition-colors">Customers</Link>
           <ChevronRight size={12} />
           <span className="text-gray-600 font-medium">List</span>
         </div>
@@ -240,7 +240,7 @@ export default function CustomerDetailPage() {
                   <X size={12} /> Cancel
                 </button>
                 <button onClick={handleSave} disabled={saving}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 disabled:opacity-50">
                   <Save size={12} /> {saving ? 'Saving...' : 'Save'}
                 </button>
               </>
@@ -253,7 +253,7 @@ export default function CustomerDetailPage() {
           {TABS.map((t) => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px ${
-                tab === t.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-600'
+                tab === t.key ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-400 hover:text-gray-600'
               }`}>
               {t.label}
             </button>

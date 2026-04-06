@@ -61,7 +61,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 size={32} className="animate-spin text-blue-500" />
+        <Loader2 size={32} className="animate-spin text-indigo-500" />
       </div>
     );
   }
@@ -106,7 +106,7 @@ export default function Dashboard() {
           label="Total Customers"
           value={c.total_customers || 0}
           sub="all customers"
-          color="blue"
+          color="indigo"
           link="/customers"
         />
         {/* Online Now */}
@@ -117,7 +117,6 @@ export default function Dashboard() {
           sub={`${c.active_customers || 0} active customers`}
           color="emerald"
           link="/customers"
-          highlight={c.online_customers > 0}
         />
         {/* Active but Offline */}
         <StatCard
@@ -146,7 +145,7 @@ export default function Dashboard() {
           label="Monthly Revenue"
           value={fmtCurrency(c.monthly_revenue)}
           sub={`${c.active_plans || 0} active plans`}
-          color="violet"
+          color="amber"
           link="/plans"
         />
         <StatCard
@@ -170,7 +169,7 @@ export default function Dashboard() {
           label="Pending Tasks"
           value={c.pending_tasks || 0}
           sub={`${c.total_tasks || 0} total`}
-          color="sky"
+          color="indigo"
           link="/tasks"
         />
       </div>
@@ -185,13 +184,13 @@ export default function Dashboard() {
               <select
                 value={bandwidthPeriod}
                 onChange={(e) => setBandwidthPeriod(e.target.value)}
-                className="text-xs border border-gray-200 rounded-md px-2 py-1 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
               >
                 <option value="day">Today</option>
                 <option value="week">This Week</option>
                 <option value="month">This Month</option>
               </select>
-              <Link to="/customers" className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
+              <Link to="/customers" className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
                 View all <ArrowRight size={12} />
               </Link>
             </div>
@@ -226,7 +225,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-800">Recent Tickets</h3>
-            <Link to="/tickets" className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
+            <Link to="/tickets" className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
               View all <ArrowRight size={12} />
             </Link>
           </div>
@@ -256,7 +255,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-800">Recent Leads</h3>
-            <Link to="/leads" className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
+            <Link to="/leads" className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
               Pipeline <ArrowRight size={12} />
             </Link>
           </div>
@@ -290,7 +289,7 @@ export default function Dashboard() {
               <div className="divide-y">
                 {notifications.slice(0, 5).map((n) => (
                   <div key={n.id} onClick={() => n.link && navigate(n.link)}
-                    className={`px-5 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors ${!n.is_read ? 'bg-blue-50/30' : ''}`}>
+                    className={`px-5 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors ${!n.is_read ? 'bg-amber-50/30' : ''}`}>
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
                       n.type === 'new_ticket' ? 'bg-orange-50 text-orange-500' :
                       n.type === 'new_message' ? 'bg-blue-50 text-blue-500' : 'bg-gray-100 text-gray-400'
@@ -301,7 +300,7 @@ export default function Dashboard() {
                       <p className={`text-sm truncate ${!n.is_read ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>{n.title}</p>
                       {n.body && <p className="text-[11px] text-gray-400 truncate">{n.body}</p>}
                     </div>
-                    {!n.is_read && <span className="w-2 h-2 bg-blue-500 rounded-full shrink-0" />}
+                    {!n.is_read && <span className="w-2 h-2 bg-amber-500 rounded-full shrink-0" />}
                   </div>
                 ))}
               </div>
@@ -363,9 +362,9 @@ export default function Dashboard() {
 
 function StatCard({ icon, label, value, sub, color, link }) {
   const colorMap = {
+    indigo: 'bg-indigo-50 text-indigo-600',
     blue: 'bg-blue-50 text-blue-600',
     emerald: 'bg-emerald-50 text-emerald-600',
-    violet: 'bg-violet-50 text-violet-600',
     amber: 'bg-amber-50 text-amber-600',
     purple: 'bg-purple-50 text-purple-600',
     sky: 'bg-sky-50 text-sky-600',
@@ -378,7 +377,7 @@ function StatCard({ icon, label, value, sub, color, link }) {
 
   return (
     <Wrapper {...wrapperProps}
-      className="bg-white rounded-xl border shadow-sm p-3 md:p-5 hover:shadow-md transition-shadow cursor-pointer group">
+      className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-5 hover:shadow-md transition-all cursor-pointer group">
       <div className="flex items-center justify-between mb-3">
         <div className={`p-2.5 rounded-lg ${colorMap[color] || colorMap.blue}`}>
           {icon}

@@ -101,7 +101,7 @@ export default function CustomerDocuments({ customerId }) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-400">{docs.length} document{docs.length !== 1 ? 's' : ''}</p>
-        <label className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 cursor-pointer">
+        <label className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 cursor-pointer">
           <Upload size={14} />
           Upload
           <input type="file" className="hidden" onChange={handleFileSelect} disabled={uploading} />
@@ -142,7 +142,7 @@ export default function CustomerDocuments({ customerId }) {
               <button
                 onClick={handleUpload}
                 disabled={uploading}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 text-sm font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 disabled:opacity-50 flex items-center gap-2"
               >
                 {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
                 {uploading ? 'Uploading...' : 'Upload'}

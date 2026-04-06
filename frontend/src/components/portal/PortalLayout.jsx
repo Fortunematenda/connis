@@ -5,6 +5,7 @@ import {
   User, LogOut, Menu, X, BarChart3, MessageSquare,
   Bell, ChevronDown, Settings, Shield,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { portalApi } from '../../services/api';
 
 const navItems = [
@@ -33,7 +34,9 @@ export default function PortalLayout() {
     portalApi.getMe().then(res => {
       setUser(res.data);
       localStorage.setItem('connis_portal_user', JSON.stringify(res.data));
-    }).catch(() => {
+    }).catch((err) => {
+      console.error('[Portal] getMe failed:', err.message);
+      toast.error('Session expired. Please sign in again.');
       localStorage.removeItem('connis_portal_token');
       localStorage.removeItem('connis_portal_user');
       navigate('/portal/login');
@@ -58,12 +61,12 @@ export default function PortalLayout() {
   const initial = (user?.full_name || user?.username || 'U')[0].toUpperCase();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-[#f0eef5] flex">
       {/* Sidebar — Desktop */}
       <aside className="hidden md:flex fixed left-0 top-0 h-full w-60 bg-white border-r flex-col z-40">
         <div className="px-5 py-4 border-b">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white">
+            <div className="w-9 h-9 rounded-xl bg-[#2d2e50] flex items-center justify-center text-amber-400">
               <Wifi size={18} />
             </div>
             <div>
@@ -73,7 +76,7 @@ export default function PortalLayout() {
           </div>
         </div>
 
-        <div className={`mx-3 mt-3 rounded-xl px-4 py-3 ${balance > 0 ? 'bg-gradient-to-r from-blue-600 to-indigo-600' : 'bg-gradient-to-r from-red-500 to-red-600'} text-white`}>
+        <div className={`mx-3 mt-3 rounded-xl px-4 py-3 ${balance > 0 ? 'bg-gradient-to-r from-[#2d2e50] to-indigo-700' : 'bg-gradient-to-r from-red-500 to-red-600'} text-white`}>
           <p className="text-[10px] uppercase tracking-wider opacity-70">Balance</p>
           <p className="text-xl font-black mt-0.5">R{balance.toFixed(2)}</p>
         </div>
@@ -83,7 +86,7 @@ export default function PortalLayout() {
             <NavLink key={to} to={to} end={end}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all ${
-                  isActive ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  isActive ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`
               }>
               <Icon size={18} /> {label}
@@ -93,7 +96,7 @@ export default function PortalLayout() {
 
         <div className="px-3 py-3 border-t">
           <div className="flex items-center gap-3 px-3 py-2">
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">{initial}</div>
+            <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">{initial}</div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-gray-800 truncate">{user?.full_name || user?.username}</p>
               <p className="text-[10px] text-gray-400 truncate">{user?.username}</p>
@@ -111,12 +114,12 @@ export default function PortalLayout() {
       }`}>
         <div className="px-5 py-4 border-b flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white"><Wifi size={14} /></div>
+            <div className="w-8 h-8 rounded-lg bg-[#2d2e50] flex items-center justify-center text-amber-400"><Wifi size={14} /></div>
             <span className="text-sm font-bold text-gray-900">{user?.company_name || 'My ISP'}</span>
           </div>
           <button onClick={() => setMobileOpen(false)} className="p-1 text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
-        <div className={`mx-3 mt-3 rounded-xl px-4 py-3 ${balance > 0 ? 'bg-gradient-to-r from-blue-600 to-indigo-600' : 'bg-gradient-to-r from-red-500 to-red-600'} text-white`}>
+        <div className={`mx-3 mt-3 rounded-xl px-4 py-3 ${balance > 0 ? 'bg-gradient-to-r from-[#2d2e50] to-indigo-700' : 'bg-gradient-to-r from-red-500 to-red-600'} text-white`}>
           <p className="text-[10px] uppercase tracking-wider opacity-70">Balance</p>
           <p className="text-xl font-black mt-0.5">R{balance.toFixed(2)}</p>
         </div>
@@ -125,7 +128,7 @@ export default function PortalLayout() {
             <NavLink key={to} to={to} end={end} onClick={() => setMobileOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all ${
-                  isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                  isActive ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'
                 }`
               }>
               <Icon size={18} /> {label}
@@ -134,7 +137,7 @@ export default function PortalLayout() {
         </nav>
         <div className="px-3 py-3 border-t">
           <div className="flex items-center gap-3 px-3 py-2">
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">{initial}</div>
+            <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">{initial}</div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-gray-800 truncate">{user?.full_name || user?.username}</p>
               <p className="text-[10px] text-gray-400 truncate">{user?.username}</p>
@@ -153,11 +156,11 @@ export default function PortalLayout() {
               <Menu size={20} />
             </button>
             <div className="flex items-center gap-2 md:hidden">
-              <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white"><Wifi size={12} /></div>
+              <div className="w-7 h-7 rounded-lg bg-[#2d2e50] flex items-center justify-center text-amber-400"><Wifi size={12} /></div>
               <span className="text-sm font-bold text-gray-800">{user?.company_name || 'My ISP'}</span>
             </div>
             {/* Desktop: balance badge */}
-            <div className={`hidden md:block px-3 py-1 rounded-lg text-sm font-bold ${balance > 0 ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-600'}`}>
+            <div className={`hidden md:block px-3 py-1 rounded-lg text-sm font-bold ${balance > 0 ? 'bg-indigo-50 text-indigo-700' : 'bg-red-50 text-red-600'}`}>
               R{balance.toFixed(2)}
             </div>
           </div>
@@ -173,7 +176,7 @@ export default function PortalLayout() {
             <div className="relative" ref={profileRef}>
               <button onClick={() => setProfileOpen(!profileOpen)}
                 className="flex items-center gap-2 p-1.5 pr-2 rounded-lg hover:bg-gray-100 transition-colors">
-                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">{initial}</div>
+                <div className="w-8 h-8 rounded-full bg-[#2d2e50] text-amber-400 flex items-center justify-center text-xs font-bold">{initial}</div>
                 <span className="hidden sm:block text-sm font-medium text-gray-700 max-w-[120px] truncate">{user?.full_name || user?.username}</span>
                 <ChevronDown size={14} className={`text-gray-400 transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
               </button>
@@ -181,15 +184,15 @@ export default function PortalLayout() {
               {profileOpen && (
                 <div className="absolute right-0 top-full mt-1 w-64 bg-white rounded-xl border shadow-xl z-50 overflow-hidden">
                   {/* User info */}
-                  <div className="px-4 py-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-b">
+                  <div className="px-4 py-4 bg-gradient-to-br from-indigo-50 to-purple-50 border-b">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold">{initial}</div>
+                      <div className="w-11 h-11 rounded-full bg-[#2d2e50] text-amber-400 flex items-center justify-center text-sm font-bold">{initial}</div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-900 truncate">{user?.full_name || user?.username}</p>
                         <p className="text-xs text-gray-500 truncate">{user?.email || user?.username}</p>
                       </div>
                     </div>
-                    <div className={`mt-3 px-3 py-1.5 rounded-lg text-sm font-bold inline-block ${balance > 0 ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-600'}`}>
+                    <div className={`mt-3 px-3 py-1.5 rounded-lg text-sm font-bold inline-block ${balance > 0 ? 'bg-indigo-100 text-indigo-700' : 'bg-red-100 text-red-600'}`}>
                       Balance: R{balance.toFixed(2)}
                     </div>
                   </div>

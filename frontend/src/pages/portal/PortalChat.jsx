@@ -222,7 +222,7 @@ export default function PortalChat() {
                     ) : (
                       <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
                         isMe
-                          ? 'bg-blue-600 text-white rounded-br-md'
+                          ? 'bg-amber-500/90 text-white rounded-br-md'
                           : 'bg-gray-100 text-gray-800 rounded-bl-md'
                       }`}>
                         {m.ticket_id && m.content.startsWith('[Ticket]') ? (
@@ -296,7 +296,7 @@ export default function PortalChat() {
           className="flex-1 px-4 py-3 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-white"
         />
         <button type="submit" disabled={sending || (!text.trim() && !preview)}
-          className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors">
+          className="px-4 py-3 bg-amber-500/90 text-white rounded-xl hover:bg-amber-600 disabled:opacity-50 transition-colors">
           {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
         </button>
       </form>

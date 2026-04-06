@@ -126,7 +126,7 @@ const SettingsPage = () => {
               onClick={() => setTab(key)}
               className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-all border-b-2 ${
                 tab === key
-                  ? 'text-blue-600 border-blue-600 bg-blue-50/50'
+                  ? 'text-blue-600 border-amber-500 bg-blue-50/50'
                   : 'text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-50'
               }`}
             >
@@ -182,7 +182,7 @@ const SettingsPage = () => {
                   </div>
                   <div className="flex items-center gap-3 pt-2">
                     <button onClick={saveCompany} disabled={companySaving}
-                      className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 text-sm font-medium transition-colors">
+                      className="flex items-center gap-2 px-5 py-2.5 bg-amber-500/90 text-white rounded-xl hover:bg-amber-600 disabled:opacity-50 text-sm font-medium transition-colors">
                       {companySaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Save Changes
                     </button>
                     <button onClick={cancelEditCompany}

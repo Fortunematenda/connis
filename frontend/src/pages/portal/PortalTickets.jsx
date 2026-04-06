@@ -125,7 +125,7 @@ export default function PortalTickets() {
             <button type="button" onClick={() => setView('list')}
               className="px-4 py-2.5 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
             <button type="submit" disabled={creating || !subject.trim() || !description.trim()}
-              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+              className="px-5 py-2.5 bg-amber-500/90 text-white rounded-lg text-sm font-semibold hover:bg-amber-600 disabled:opacity-50 flex items-center gap-2">
               {creating ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               {creating ? 'Submitting...' : 'Submit Ticket'}
             </button>
@@ -199,7 +199,7 @@ export default function PortalTickets() {
                 placeholder="Type your reply..."
                 className="flex-1 px-3.5 py-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
               <button type="submit" disabled={sendingComment || !newComment.trim()}
-                className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
+                className="px-4 py-2.5 bg-amber-500/90 text-white rounded-lg text-sm font-semibold hover:bg-amber-600 disabled:opacity-50">
                 {sendingComment ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               </button>
             </form>
@@ -218,7 +218,7 @@ export default function PortalTickets() {
           <p className="text-sm text-gray-400 mt-0.5">Need help? Open a support ticket</p>
         </div>
         <button onClick={() => setView('create')}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm self-start sm:self-auto">
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 shadow-sm self-start sm:self-auto">
           <Plus size={14} /> New Ticket
         </button>
       </div>

@@ -64,14 +64,14 @@ CREATE INDEX IF NOT EXISTS idx_routers_company ON routers(company_id);
 -- (must run before CREATE INDEX on these columns)
 -- ============================================================
 ALTER TABLE companies ADD COLUMN IF NOT EXISTS bank_details TEXT;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE;
-ALTER TABLE plans ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE SET NULL;
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE SET NULL;
 ALTER TABLE plans ADD COLUMN IF NOT EXISTS mikrotik_profile VARCHAR(100);
 ALTER TABLE plans ADD COLUMN IF NOT EXISTS radius_rate_limit VARCHAR(100);
 ALTER TABLE routers ADD COLUMN IF NOT EXISTS auth_type VARCHAR(10) NOT NULL DEFAULT 'radius';
-ALTER TABLE leads ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE SET NULL;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS converted_to UUID REFERENCES users(id);
-ALTER TABLE sessions ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE;
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE SET NULL;
 ALTER TABLE company_admins ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
 ALTER TABLE documents ADD COLUMN IF NOT EXISTS description TEXT;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES company_admins(id) ON DELETE SET NULL;
@@ -356,8 +356,11 @@ CREATE TABLE IF NOT EXISTS documents (
   file_size     BIGINT DEFAULT 0,
   mime_type     VARCHAR(100),
   uploaded_by   UUID REFERENCES company_admins(id) ON DELETE SET NULL,
-  created_at    TIMESTAMP DEFAULT NOW()
+  created_at    TIMESTAMP DEFAULT NOW(),
+  updated_at    TIMESTAMP DEFAULT NOW()
 );
+
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
 
 CREATE INDEX IF NOT EXISTS idx_documents_company ON documents(company_id);
 CREATE INDEX IF NOT EXISTS idx_documents_user ON documents(user_id);

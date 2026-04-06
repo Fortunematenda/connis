@@ -129,7 +129,7 @@ const RegisterPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2 font-medium transition"
+              className="w-full bg-amber-500/90 text-white py-2.5 rounded-lg hover:bg-amber-600 disabled:opacity-50 flex items-center justify-center gap-2 font-medium transition"
             >
               <UserPlus size={18} />
               {loading ? 'Creating account...' : 'Create Account'}

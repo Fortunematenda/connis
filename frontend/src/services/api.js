@@ -485,7 +485,7 @@ const portalFetch = (url, options = {}) => {
 const handlePortalResponse = async (response) => {
   const data = await response.json();
   if (!response.ok) {
-    if (response.status === 401) {
+    if (response.status === 401 && localStorage.getItem('connis_portal_token')) {
       localStorage.removeItem('connis_portal_token');
       localStorage.removeItem('connis_portal_user');
       window.location.href = '/portal/login';

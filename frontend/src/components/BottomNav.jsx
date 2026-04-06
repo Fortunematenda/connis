@@ -3,7 +3,6 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, UserCheck, Ticket, MessageSquare, MoreHorizontal,
   Target, CheckSquare, Wifi, TicketCheck, Shield, Globe, Settings, X,
-  Plus, UserPlus, CreditCard, Zap,
 } from 'lucide-react';
 import { messagesApi, notificationsApi } from '../services/api';
 
@@ -39,33 +38,8 @@ const moreSections = [
   },
 ];
 
-// Context-aware FAB actions per route
-const fabActions = {
-  '/': [
-    { icon: Target, label: 'Add Lead', to: '/leads', color: 'bg-violet-500' },
-    { icon: UserPlus, label: 'Add Customer', to: '/customers', color: 'bg-blue-500' },
-    { icon: Zap, label: 'New Voucher', to: '/vouchers', color: 'bg-emerald-500' },
-  ],
-  '/leads': [
-    { icon: Target, label: 'Add Lead', action: 'add-lead', color: 'bg-violet-500' },
-  ],
-  '/customers': [
-    { icon: UserPlus, label: 'Add Customer', to: '/leads', color: 'bg-blue-500' },
-  ],
-  '/tickets': [
-    { icon: Ticket, label: 'New Ticket', action: 'add-ticket', color: 'bg-orange-500' },
-  ],
-  '/vouchers': [
-    { icon: TicketCheck, label: 'Generate', action: 'add-voucher', color: 'bg-emerald-500' },
-  ],
-  '/tasks': [
-    { icon: CheckSquare, label: 'New Task', action: 'add-task', color: 'bg-amber-500' },
-  ],
-};
-
 export default function BottomNav() {
   const [moreOpen, setMoreOpen] = useState(false);
-  const [fabOpen, setFabOpen] = useState(false);
   const [badges, setBadges] = useState({ tickets: 0, messages: 0 });
   const navigate = useNavigate();
   const location = useLocation();
@@ -90,54 +64,11 @@ export default function BottomNav() {
     return () => clearInterval(interval);
   }, [fetchBadges]);
 
-  // Close FAB when navigating
-  useEffect(() => { setFabOpen(false); setMoreOpen(false); }, [location.pathname]);
-
-  // Get FAB actions for current page
-  const currentPath = '/' + (location.pathname.split('/')[1] || '');
-  const actions = fabActions[currentPath] || fabActions['/'];
-
-  const handleFabAction = (a) => {
-    setFabOpen(false);
-    if (a.to) navigate(a.to);
-    // For 'action' type, dispatch custom event that page components can listen to
-    if (a.action) window.dispatchEvent(new CustomEvent('fab-action', { detail: a.action }));
-  };
+  // Close menus when navigating
+  useEffect(() => { setMoreOpen(false); }, [location.pathname]);
 
   return (
     <>
-      {/* ── FAB (Floating Action Button) ── */}
-      {fabOpen && (
-        <div className="fixed inset-0 bg-black/20 z-40 md:hidden" onClick={() => setFabOpen(false)} />
-      )}
-      <div className="fixed bottom-20 right-4 z-50 md:hidden flex flex-col-reverse items-end gap-2">
-        {/* FAB actions - show when open */}
-        {fabOpen && actions.map((a, i) => (
-          <button
-            key={i}
-            onClick={() => handleFabAction(a)}
-            className="flex items-center gap-2.5 pl-4 pr-3 py-2.5 bg-white rounded-2xl shadow-lg border animate-fab-item active:scale-95 transition-transform"
-            style={{ animationDelay: `${i * 50}ms` }}
-          >
-            <span className="text-sm font-medium text-gray-800">{a.label}</span>
-            <div className={`w-9 h-9 rounded-xl ${a.color} flex items-center justify-center`}>
-              <a.icon size={18} className="text-white" />
-            </div>
-          </button>
-        ))}
-        {/* Main FAB */}
-        <button
-          onClick={() => setFabOpen(!fabOpen)}
-          className={`w-14 h-14 rounded-2xl shadow-lg flex items-center justify-center transition-all duration-200 active:scale-90 ${
-            fabOpen
-              ? 'bg-gray-800 rotate-45'
-              : 'bg-blue-600 shadow-blue-200'
-          }`}
-        >
-          <Plus size={26} className="text-white" />
-        </button>
-      </div>
-
       {/* ── More bottom sheet ── */}
       {moreOpen && (
         <>
@@ -190,7 +121,7 @@ export default function BottomNav() {
               end={to === '/'}
               className={({ isActive }) =>
                 `relative flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all active:scale-90 ${
-                  isActive ? 'text-blue-600' : 'text-gray-400'
+                  isActive ? 'text-indigo-600' : 'text-gray-400'
                 }`
               }
             >
@@ -205,16 +136,16 @@ export default function BottomNav() {
                     )}
                   </div>
                   <span className={`text-[10px] ${isActive ? 'font-bold' : 'font-medium'}`}>{label}</span>
-                  {isActive && <div className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-blue-600" />}
+                  {isActive && <div className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-indigo-600" />}
                 </>
               )}
             </NavLink>
           ))}
           {/* More button */}
           <button
-            onClick={() => { setMoreOpen(true); setFabOpen(false); }}
+            onClick={() => setMoreOpen(true)}
             className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all active:scale-90 ${
-              moreOpen ? 'text-blue-600' : 'text-gray-400'
+              moreOpen ? 'text-indigo-600' : 'text-gray-400'
             }`}
           >
             <MoreHorizontal size={22} strokeWidth={moreOpen ? 2.5 : 1.8} />

@@ -13,14 +13,14 @@ const customerLogin = async (req, res, next) => {
     const { username, password } = req.body;
     if (!username || !password) throw new ApiError(400, 'Username and password are required');
 
-    // Find user by username (password stored in plain text for PPPoE compatibility)
+    // Find user by username OR email (password stored in plain text for PPPoE compatibility)
     const userRes = await pool.query(
       `SELECT u.id, u.company_id, u.username, u.password, u.full_name, u.email,
               u.phone, u.address, u.balance, u.active, u.seq_id,
               c.name AS company_name
        FROM users u
        JOIN companies c ON u.company_id = c.id
-       WHERE u.username = $1`,
+       WHERE u.username = $1 OR u.email = $1`,
       [username.trim()]
     );
 

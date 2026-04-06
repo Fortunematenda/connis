@@ -172,7 +172,7 @@ export default function StaffPage() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm">
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 transition shadow-sm">
             <Plus size={16} />
             Add
           </button>
@@ -368,7 +368,7 @@ export default function StaffPage() {
                         onClick={() => setPage(p)}
                         className={`min-w-[28px] h-7 text-xs font-medium rounded transition ${
                           p === safePage
-                            ? 'bg-blue-600 text-white'
+                            ? 'bg-amber-500/90 text-white'
                             : 'text-gray-600 hover:bg-gray-100'
                         }`}
                       >
@@ -437,7 +437,7 @@ export default function StaffPage() {
                 <button type="button" onClick={() => { setShowModal(false); setError(''); }}
                   className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition">Cancel</button>
                 <button type="submit" disabled={saving}
-                  className="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition">
+                  className="px-5 py-2 text-sm font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 disabled:opacity-50 transition">
                   {saving ? 'Adding...' : 'Add Administrator'}
                 </button>
               </div>

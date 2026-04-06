@@ -8,7 +8,7 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#f0eef5]">
       <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
       {/* Right panel: navbar + content */}
       <div className="md:ml-64 flex flex-col min-h-screen">

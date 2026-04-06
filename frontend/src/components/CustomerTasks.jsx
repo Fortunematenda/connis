@@ -100,7 +100,7 @@ export default function CustomerTasks({ customerId }) {
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-700">{tasks.length} Task{tasks.length !== 1 ? 's' : ''}</h3>
         <button onClick={() => setShowCreate(!showCreate)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600">
           {showCreate ? <X size={12} /> : <Plus size={12} />} {showCreate ? 'Cancel' : 'Add Task'}
         </button>
       </div>
@@ -124,7 +124,7 @@ export default function CustomerTasks({ customerId }) {
             </select>
             <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })}
               className="px-3 py-2 border rounded-lg text-sm bg-white" />
-            <button onClick={handleCreate} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Create</button>
+            <button onClick={handleCreate} className="px-4 py-2 bg-amber-500/90 text-white rounded-lg text-sm font-medium hover:bg-amber-600">Create</button>
           </div>
         </div>
       )}

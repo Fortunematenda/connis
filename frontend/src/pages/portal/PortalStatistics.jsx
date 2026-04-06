@@ -159,7 +159,7 @@ export default function PortalStatistics() {
                       {fmtDate(d.day)}: {formatBytes(dl)} ↓ / {formatBytes(ul)} ↑
                     </div>
                     <div
-                      className="w-full bg-blue-500 rounded-t-sm hover:bg-blue-600 transition-colors cursor-pointer"
+                      className="w-full bg-blue-500 rounded-t-sm hover:bg-amber-500/90 transition-colors cursor-pointer"
                       style={{ height: `${pct}%`, minHeight: '3px' }}
                     />
                   </div>

@@ -128,13 +128,13 @@ export default function LeadsPipeline() {
           <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
             <button
               onClick={() => setViewMode('kanban')}
-              className={`p-1.5 rounded-md transition-colors ${viewMode === 'kanban' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400'}`}
+              className={`p-1.5 rounded-md transition-colors ${viewMode === 'kanban' ? 'bg-white shadow-sm text-amber-600' : 'text-gray-400'}`}
             >
               <LayoutGrid size={16} />
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400'}`}
+              className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-amber-600' : 'text-gray-400'}`}
             >
               <List size={16} />
             </button>
@@ -149,7 +149,7 @@ export default function LeadsPipeline() {
           </button>
           <button
             onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 transition-colors shadow-sm"
           >
             <Plus size={16} />
             Add Lead
@@ -160,7 +160,7 @@ export default function LeadsPipeline() {
       {/* Loading state */}
       {loading && leads.length === 0 ? (
         <div className="flex items-center justify-center h-64">
-          <Loader2 size={32} className="animate-spin text-blue-500" />
+          <Loader2 size={32} className="animate-spin text-amber-500" />
           <span className="ml-3 text-gray-500">Loading pipeline...</span>
         </div>
       ) : viewMode === 'kanban' ? (
@@ -244,11 +244,15 @@ export default function LeadsPipeline() {
                   <tr
                     key={lead.id}
                     onClick={() => setSelectedLead(lead)}
-                    className="border-b last:border-0 hover:bg-gray-50 cursor-pointer"
+                    className={`border-b last:border-0 cursor-pointer transition-colors ${
+                      lead.status === 'converted' ? 'bg-green-50/30 opacity-60 hover:bg-green-50/50' :
+                      lead.status === 'lost' ? 'bg-gray-50/50 opacity-50 hover:bg-gray-100/50' :
+                      'hover:bg-gray-50'
+                    }`}
                   >
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">{lead.name}</div>
-                      <div className="text-xs text-gray-400">{lead.email}</div>
+                      <div className="font-medium text-gray-900">{lead.full_name || lead.name}</div>
+                      <div className="text-xs text-gray-400">{lead.email || '—'}</div>
                     </td>
                     <td className="px-4 py-3 text-gray-600">{lead.phone || '—'}</td>
                     <td className="px-4 py-3 text-gray-600">{lead.address || '—'}</td>
@@ -280,7 +284,7 @@ export default function LeadsPipeline() {
                 className="w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900">{lead.name}</p>
+                    <p className="text-sm font-medium text-gray-900">{lead.full_name || lead.name}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
                         lead.status === 'converted' ? 'text-emerald-700 bg-emerald-50' :

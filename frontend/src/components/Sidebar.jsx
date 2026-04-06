@@ -51,18 +51,18 @@ export default function Sidebar({ mobileOpen, onClose }) {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-slate-900 text-white flex flex-col z-50 transition-transform duration-200 ease-in-out ${
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-[#1e1f3b] text-white flex flex-col z-50 transition-transform duration-200 ease-in-out ${
         mobileOpen ? 'translate-x-0' : '-translate-x-full'
       } md:translate-x-0`}>
         {/* Logo */}
-        <div className="px-6 py-5 border-b border-slate-700 flex items-center justify-between">
+        <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between">
           <div className="cursor-pointer" onClick={() => { navigate('/'); handleNav(); }}>
             <h1 className="text-2xl font-bold tracking-tight">
-              <span className="text-blue-400">CON</span>NIS
+              <span className="text-amber-400">CON</span>NIS
             </h1>
-            <p className="text-xs text-slate-400 mt-0.5">ISP Management Platform</p>
+            <p className="text-xs text-indigo-300/60 mt-0.5">ISP Management Platform</p>
           </div>
-          <button onClick={onClose} className="md:hidden p-1 text-slate-400 hover:text-white">
+          <button onClick={onClose} className="md:hidden p-1 text-indigo-300/60 hover:text-white">
             <X size={20} />
           </button>
         </div>
@@ -76,10 +76,10 @@ export default function Sidebar({ mobileOpen, onClose }) {
               end={to === '/'}
               onClick={handleNav}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
                   isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-amber-500/90 text-white shadow-lg shadow-amber-500/20'
+                    : 'text-indigo-200/70 hover:bg-white/8 hover:text-white'
                 }`
               }
             >
@@ -90,10 +90,10 @@ export default function Sidebar({ mobileOpen, onClose }) {
         </nav>
 
         {/* Footer — Logout */}
-        <div className="px-4 py-3 border-t border-slate-700">
+        <div className="px-4 py-3 border-t border-white/10">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-colors w-full"
+            className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-indigo-300/60 hover:bg-white/8 hover:text-white transition-colors w-full"
           >
             <LogOut size={18} />
             Sign Out

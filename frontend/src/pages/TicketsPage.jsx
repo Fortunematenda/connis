@@ -209,7 +209,7 @@ export default function TicketsPage() {
                     placeholder="Write a comment..." onKeyDown={(e) => e.key === 'Enter' && handleComment()}
                     className="flex-1 px-3 py-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
                   <button onClick={handleComment} disabled={sending || !comment.trim()}
-                    className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+                    className="px-4 py-2.5 bg-amber-500/90 text-white rounded-lg text-sm font-medium hover:bg-amber-600 disabled:opacity-50">
                     <MessageCircle size={14} />
                   </button>
                 </div>
@@ -302,7 +302,7 @@ export default function TicketsPage() {
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
           <button onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm">
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 shadow-sm">
             <Plus size={14} /> Create Ticket
           </button>
         </div>
@@ -310,8 +310,8 @@ export default function TicketsPage() {
 
       {/* Create modal */}
       {showCreate && (
-        <div className="fixed inset-0 bg-black/30 z-50 flex items-start justify-center pt-8 md:pt-20 px-4" onClick={(e) => e.target === e.currentTarget && setShowCreate(false)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-4 md:p-6 space-y-4">
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-start justify-center pt-4 md:pt-20 px-3 md:px-4 overflow-y-auto pb-4" onClick={(e) => e.target === e.currentTarget && setShowCreate(false)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-4 md:p-6 space-y-4 my-auto md:my-0">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-gray-900">Create Ticket</h3>
               <button onClick={() => setShowCreate(false)} className="p-1 hover:bg-gray-100 rounded"><X size={18} className="text-gray-400" /></button>
@@ -358,7 +358,7 @@ export default function TicketsPage() {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">Cancel</button>
-              <button onClick={handleCreate} className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">Create Ticket</button>
+              <button onClick={handleCreate} className="px-5 py-2 bg-amber-500/90 text-white text-sm font-medium rounded-lg hover:bg-amber-600">Create Ticket</button>
             </div>
           </div>
         </div>
@@ -449,30 +449,30 @@ export default function TicketsPage() {
           {view === 'list' && (
             <div className="bg-white rounded-xl border shadow-sm">
               {/* Toolbar */}
-              <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b">
-                <div className="flex items-center gap-2">
+              <div className="px-4 py-3 border-b space-y-3">
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input type="text" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                    placeholder="Search tickets..." className="pl-9 pr-4 py-2.5 border rounded-xl text-sm w-full outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 bg-gray-50/50" />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
                   <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-                    className="px-3 py-2 border rounded-lg text-sm bg-white">
+                    className="flex-1 min-w-[120px] px-3 py-2 border rounded-lg text-sm bg-white">
                     <option value="all">All Status ({tickets.length})</option>
                     {Object.entries(STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.label} ({counts[k] || 0})</option>)}
                   </select>
                   <select value={filterPriority} onChange={(e) => { setFilterPriority(e.target.value); setPage(1); }}
-                    className="px-3 py-2 border rounded-lg text-sm bg-white">
+                    className="flex-1 min-w-[110px] px-3 py-2 border rounded-lg text-sm bg-white">
                     <option value="all">All Priority</option>
                     {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                   </select>
                   <select value={perPage} onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}
-                    className="px-3 py-2 border rounded-lg text-sm bg-white">
+                    className="hidden sm:block px-3 py-2 border rounded-lg text-sm bg-white">
                     <option value={15}>15 per page</option>
                     <option value={25}>25 per page</option>
                     <option value={50}>50 per page</option>
                     <option value={100}>100 per page</option>
                   </select>
-                </div>
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input type="text" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                    placeholder="Search..." className="pl-9 pr-4 py-2 border rounded-lg text-sm w-full sm:w-56 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
                 </div>
               </div>
 
@@ -502,7 +502,7 @@ export default function TicketsPage() {
                       </thead>
                       <tbody>
                         {paginated.map((t, idx) => (
-                          <tr key={t.id} className="border-b last:border-0 hover:bg-blue-50/30 transition-colors">
+                          <tr key={t.id} onClick={() => loadDetail(t.id)} className="border-b last:border-0 hover:bg-blue-50/30 transition-colors cursor-pointer">
                             <td className="pl-4 pr-2 py-3 text-xs font-mono text-gray-400">
                               {(page - 1) * perPage + idx + 1}
                             </td>
@@ -557,22 +557,18 @@ export default function TicketsPage() {
                   <div className="md:hidden divide-y">
                     {paginated.map((t) => (
                       <button key={t.id} onClick={() => loadDetail(t.id)}
-                        className="w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-900 truncate">{t.subject}</p>
-                            <p className="text-xs text-gray-400 mt-0.5">{t.customer_name || 'No customer'} · {fmtRelative(t.created_at)}</p>
+                        className="w-full px-4 py-2.5 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_META[t.status]?.dot || 'bg-gray-400'}`} />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-900 truncate">{t.subject}</p>
+                              <p className="text-[11px] text-gray-400">{t.customer_name || 'No customer'} · {fmtRelative(t.created_at)}{t.assigned_name ? ` → ${t.assigned_name}` : ''}</p>
+                            </div>
                           </div>
                           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${PRIORITY_META[t.priority]?.color || ''}`}>
                             {PRIORITY_META[t.priority]?.label || t.priority}
                           </span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded ${STATUS_META[t.status]?.color || 'bg-gray-100'}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_META[t.status]?.dot || 'bg-gray-400'}`} />
-                            {STATUS_META[t.status]?.label || t.status}
-                          </span>
-                          {t.assigned_name && <span className="text-[10px] text-gray-400">→ {t.assigned_name}</span>}
                         </div>
                       </button>
                     ))}
@@ -593,7 +589,7 @@ export default function TicketsPage() {
                         if (p < 1 || p > totalPages) return null;
                         return (
                           <button key={p} onClick={() => setPage(p)}
-                            className={`px-3 py-1.5 border rounded text-xs ${p === page ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-50'}`}>
+                            className={`px-3 py-1.5 border rounded text-xs ${p === page ? 'bg-amber-500/90 text-white border-amber-500' : 'hover:bg-gray-50'}`}>
                             {p}
                           </button>
                         );

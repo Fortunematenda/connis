@@ -134,7 +134,7 @@ export default function CustomerTickets({ customerId }) {
               onKeyDown={(e) => e.key === 'Enter' && handleComment()}
               className="flex-1 px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
             <button onClick={handleComment} disabled={sending || !comment.trim()}
-              className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+              className="px-3 py-2 bg-amber-500/90 text-white rounded-lg text-sm hover:bg-amber-600 disabled:opacity-50">
               <Send size={14} />
             </button>
           </div>
@@ -166,7 +166,7 @@ export default function CustomerTickets({ customerId }) {
               <option value="high">High</option>
               <option value="critical">Critical</option>
             </select>
-            <button onClick={handleCreate} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+            <button onClick={handleCreate} className="px-4 py-2 bg-amber-500/90 text-white rounded-lg text-sm font-medium hover:bg-amber-600">
               Create Ticket
             </button>
           </div>
@@ -178,7 +178,7 @@ export default function CustomerTickets({ customerId }) {
         <p className="text-xs text-gray-400">{tickets.length} ticket{tickets.length !== 1 ? 's' : ''}</p>
         {!showCreate && (
           <button onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600">
             <Plus size={14} /> New Ticket
           </button>
         )}

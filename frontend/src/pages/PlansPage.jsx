@@ -111,7 +111,7 @@ export default function PlansPage() {
           </div>
           <button
             onClick={handleAddNew}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 transition-colors"
           >
             <Plus size={16} />
             Add Plan
@@ -161,7 +161,7 @@ export default function PlansPage() {
           </div>
           <div className="md:col-span-3 flex gap-3 justify-end">
             <button type="button" onClick={handleCancel} className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
-            <button type="submit" disabled={submitting} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">
+            <button type="submit" disabled={submitting} className="px-4 py-2 text-sm font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 disabled:opacity-50">
               {submitting ? (editingPlan ? 'Updating...' : 'Creating...') : (editingPlan ? 'Update Plan' : 'Create Plan')}
             </button>
           </div>

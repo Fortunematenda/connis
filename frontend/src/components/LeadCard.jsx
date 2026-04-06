@@ -15,26 +15,31 @@ export default function LeadCard({ lead, onClick }) {
     : undefined;
 
   const isConverted = lead.status === 'converted';
+  const isLost = lead.status === 'lost';
+  const isLocked = isConverted || isLost;
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       onClick={() => onClick?.(lead)}
-      className={`bg-white rounded-lg border p-3 shadow-sm hover:shadow-md transition-shadow group cursor-pointer ${
-        isDragging ? 'opacity-50 shadow-lg ring-2 ring-blue-400' : ''
-      } ${isConverted ? 'border-green-300 bg-green-50/50' : 'border-gray-200'}`}
+      className={`rounded-lg border p-3 shadow-sm transition-shadow group cursor-pointer ${
+        isDragging ? 'opacity-50 shadow-lg ring-2 ring-amber-400' : ''
+      } ${isConverted ? 'border-green-300 bg-green-50/30 opacity-60' : isLost ? 'border-gray-300 bg-gray-50/50 opacity-50' : 'bg-white border-gray-200 hover:shadow-md'}`}
     >
       {/* Drag handle + name */}
       <div className="flex items-start gap-2">
-        <button
-          {...listeners}
-          {...attributes}
-          onClick={(e) => e.stopPropagation()}
-          className="mt-0.5 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <GripVertical size={16} />
-        </button>
+        {!isLocked && (
+          <button
+            {...listeners}
+            {...attributes}
+            onClick={(e) => e.stopPropagation()}
+            className="mt-0.5 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <GripVertical size={16} />
+          </button>
+        )}
+        {isLocked && <div className="w-4" />}
         <div className="flex-1 min-w-0">
           <h4 className="font-semibold text-sm text-gray-900 truncate">
             {lead.full_name}

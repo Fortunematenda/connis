@@ -82,7 +82,7 @@ export default function TopNavbar({ onMenuToggle }) {
         <button onClick={onMenuToggle} className="md:hidden p-2 -ml-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
           <Menu size={20} />
         </button>
-        <span className="md:hidden text-sm font-bold text-gray-800"><span className="text-blue-600">CON</span>NIS</span>
+        <span className="md:hidden text-sm font-bold text-gray-800"><span className="text-amber-500">CON</span>NIS</span>
       </div>
       <div className="flex items-center gap-3">
         {/* Notifications Bell */}
@@ -117,7 +117,7 @@ export default function TopNavbar({ onMenuToggle }) {
                         const Icon = typeIcons[n.type] || Bell;
                         return (
                           <button key={n.id} onClick={() => handleNotifClick(n)}
-                            className={`w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors ${!n.is_read ? 'bg-blue-50/40' : ''}`}>
+                            className={`w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors ${!n.is_read ? 'bg-amber-50/40' : ''}`}>
                             <div className="flex gap-3">
                               <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                                 n.type === 'new_ticket' ? 'bg-orange-50 text-orange-500' :
@@ -131,7 +131,7 @@ export default function TopNavbar({ onMenuToggle }) {
                                 {n.body && <p className="text-xs text-gray-400 truncate mt-0.5">{n.body}</p>}
                                 <p className="text-[10px] text-gray-400 mt-1">{fmtRelative(n.created_at)}</p>
                               </div>
-                              {!n.is_read && <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 shrink-0" />}
+                              {!n.is_read && <span className="w-2 h-2 bg-amber-500 rounded-full mt-2 shrink-0" />}
                             </div>
                           </button>
                         );
@@ -155,7 +155,7 @@ export default function TopNavbar({ onMenuToggle }) {
             onClick={() => { setProfileOpen(!profileOpen); setNotifOpen(false); }}
             className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
+            <div className="w-8 h-8 rounded-full bg-[#2d2e50] flex items-center justify-center text-amber-400 text-xs font-bold">
               {initials}
             </div>
             <div className="text-left hidden sm:block">

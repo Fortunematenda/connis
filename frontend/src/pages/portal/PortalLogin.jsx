@@ -29,10 +29,10 @@ export default function PortalLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#f0eef5] via-white to-indigo-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 text-white mb-4">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#2d2e50] text-amber-400 mb-4">
             <Wifi size={28} />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Customer Portal</h1>
@@ -46,20 +46,20 @@ export default function PortalLogin() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Your username"
+              placeholder="e.g. john_pppoe"
               required
               autoFocus
-              className="w-full px-3.5 py-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+              className="w-full px-3.5 py-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Password</label>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">PPPoE Password</label>
             <div className="relative">
               <input
                 type={showPass ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Your password"
+                placeholder="Your PPPoE password"
                 required
                 className="w-full px-3.5 py-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 pr-10"
               />
@@ -72,7 +72,7 @@ export default function PortalLogin() {
           <button
             type="submit"
             disabled={loading || !username.trim() || !password}
-            className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 bg-[#2d2e50] text-white rounded-lg text-sm font-semibold hover:bg-[#3d3e60] disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
           >
             {loading ? <><Loader2 size={16} className="animate-spin" /> Signing in...</> : 'Sign In'}
           </button>
