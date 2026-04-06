@@ -63,7 +63,7 @@ function downloadICS(task) {
 function TaskCardBubble({ task }) {
   const dateStr = task.date ? new Date(task.date).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : 'To be confirmed';
   return (
-    <div className="w-full max-w-[300px] bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl overflow-hidden shadow-sm">
+    <div className="w-full max-w-[260px] sm:max-w-[300px] bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl overflow-hidden shadow-sm">
       <div className="bg-orange-500 px-4 py-2.5 flex items-center gap-2">
         <Wrench size={14} className="text-white" />
         <span className="text-white text-xs font-bold uppercase tracking-wider">Scheduled Task</span>
@@ -188,7 +188,7 @@ export default function PortalChat() {
   if (!user) return null;
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 7rem)' }}>
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 10rem)' }}>
       {/* Header */}
       <div className="flex items-center gap-3 pb-4">
         <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
@@ -213,7 +213,7 @@ export default function PortalChat() {
               const taskData = parseTaskCard(m.content);
               return (
                 <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] ${isMe ? 'order-2' : ''}`}>
+                  <div className={`max-w-[85%] sm:max-w-[80%] ${isMe ? 'order-2' : ''}`}>
                     {!isMe && (
                       <p className="text-[10px] text-gray-400 mb-0.5 ml-1">{m.admin_name || 'Support'}</p>
                     )}

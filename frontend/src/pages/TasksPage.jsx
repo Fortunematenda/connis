@@ -250,7 +250,7 @@ export default function TasksPage() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
             <span>Scheduling</span> <span>/</span> <span className="text-gray-600 font-medium">{view === 'dashboard' ? 'Dashboard' : 'Tasks'}</span>
@@ -282,7 +282,7 @@ export default function TasksPage() {
       {/* Create Modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/30 z-50 flex items-start justify-end" onClick={(e) => e.target === e.currentTarget && setShowCreate(false)}>
-          <div className="bg-white shadow-xl w-full max-w-md h-full overflow-y-auto p-6 space-y-4">
+          <div className="bg-white shadow-xl w-full max-w-md h-full overflow-y-auto p-4 md:p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-gray-900">Add Task</h3>
               <button onClick={() => setShowCreate(false)} className="p-1 hover:bg-gray-100 rounded"><X size={18} className="text-gray-400" /></button>
@@ -578,7 +578,7 @@ export default function TasksPage() {
                   </div>
 
                   {/* Pagination */}
-                  <div className="flex items-center justify-between px-4 py-3 border-t text-sm">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t text-sm">
                     <p className="text-xs text-gray-500">
                       Showing {(page - 1) * perPage + 1} to {Math.min(page * perPage, filtered.length)} of {filtered.length} entries
                     </p>

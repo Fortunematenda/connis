@@ -18,7 +18,7 @@ export default function PortalServices() {
       </div>
 
       {/* Connection Status Banner */}
-      <div className={`rounded-xl p-5 flex items-center gap-4 ${user.is_online ? 'bg-emerald-50 border border-emerald-200' : 'bg-gray-50 border border-gray-200'}`}>
+      <div className={`rounded-xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4 ${user.is_online ? 'bg-emerald-50 border border-emerald-200' : 'bg-gray-50 border border-gray-200'}`}>
         <div className={`w-12 h-12 rounded-full flex items-center justify-center ${user.is_online ? 'bg-emerald-100' : 'bg-gray-200'}`}>
           {user.is_online ? <Wifi size={22} className="text-emerald-600" /> : <WifiOff size={22} className="text-gray-400" />}
         </div>

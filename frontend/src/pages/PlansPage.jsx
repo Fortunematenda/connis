@@ -91,7 +91,7 @@ export default function PlansPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Plans</h1>
         <div className="flex items-center gap-3">
           {/* View Toggle */}

@@ -187,7 +187,7 @@ export default function CustomerDetailPage() {
   return (
     <div className="space-y-0">
       {/* ── Top bar: breadcrumb + name + badges + actions ── */}
-      <div className="bg-white border-b -mx-6 -mt-6 px-6 pt-4 pb-0 mb-6">
+      <div className="bg-white border-b -mx-4 md:-mx-6 -mt-4 md:-mt-6 px-4 md:px-6 pt-4 pb-0 mb-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-3">
           <Link to="/customers" className="hover:text-blue-600 transition-colors">Customers</Link>
@@ -196,8 +196,8 @@ export default function CustomerDetailPage() {
         </div>
 
         {/* Name row */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3 min-w-0">
             {/* Avatar circle */}
             <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${!customer.active ? 'bg-red-400' : online ? 'bg-emerald-500' : 'bg-gray-400'}`}>
               {(customer.full_name || customer.username || '?')[0].toUpperCase()}
@@ -205,7 +205,7 @@ export default function CustomerDetailPage() {
             <div>
               <div className="flex items-center gap-2.5">
                 <span className="text-[11px] font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">#{String(customer.seq_id || 0).padStart(3, '0')}</span>
-                <h1 className="text-lg font-bold text-gray-900">{customer.full_name || customer.username}</h1>
+                <h1 className="text-base md:text-lg font-bold text-gray-900 truncate">{customer.full_name || customer.username}</h1>
                 {customer.active ? (
                   online ? (
                     <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200/60 px-2 py-0.5 rounded-full">
@@ -249,7 +249,7 @@ export default function CustomerDetailPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-0">
+        <div className="flex gap-0 overflow-x-auto">
           {TABS.map((t) => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px ${

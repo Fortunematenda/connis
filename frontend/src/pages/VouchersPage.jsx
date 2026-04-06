@@ -88,7 +88,7 @@ export default function VouchersPage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Vouchers</h1>
           <p className="text-xs text-gray-400 mt-0.5">
@@ -155,7 +155,7 @@ export default function VouchersPage() {
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="Search vouchers..."
-              className="pl-9 pr-4 py-2 border rounded-lg text-sm w-56 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none" />
+              className="pl-9 pr-4 py-2 border rounded-lg text-sm w-full sm:w-56 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none" />
           </div>
         </div>
 

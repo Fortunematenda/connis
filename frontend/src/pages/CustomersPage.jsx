@@ -94,7 +94,7 @@ export default function CustomersPage() {
       {/* Table Card */}
       <div className="bg-white rounded-xl border shadow-sm">
         {/* Toolbar */}
-        <div className="flex items-center justify-between px-4 py-3 border-b">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 py-3 border-b">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             Show
             <select value={perPage} onChange={(e) => { setPerPage(+e.target.value); setPage(1); }}
@@ -109,7 +109,7 @@ export default function CustomersPage() {
               type="text" value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               placeholder="Search customers..."
-              className="pl-9 pr-4 py-2 border rounded-lg text-sm w-60 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none"
+              className="pl-9 pr-4 py-2 border rounded-lg text-sm w-full sm:w-60 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none"
             />
           </div>
         </div>
@@ -223,7 +223,7 @@ export default function CustomersPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t text-sm">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t text-sm">
             <span className="text-gray-400 text-xs">
               {(page - 1) * perPage + 1}–{Math.min(page * perPage, sorted.length)} of {sorted.length}
             </span>

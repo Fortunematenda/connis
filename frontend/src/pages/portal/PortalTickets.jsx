@@ -148,7 +148,7 @@ export default function PortalTickets() {
 
         {/* Ticket Header */}
         <div className="bg-white rounded-xl border p-5">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-bold text-gray-900">{selectedTicket.subject}</h2>
               <p className="text-xs text-gray-400 mt-1">Created {fmtDateTime(selectedTicket.created_at)}</p>
@@ -212,13 +212,13 @@ export default function PortalTickets() {
   // ─── List View ───
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Support</h1>
           <p className="text-sm text-gray-400 mt-0.5">Need help? Open a support ticket</p>
         </div>
         <button onClick={() => setView('create')}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm">
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm self-start sm:self-auto">
           <Plus size={14} /> New Ticket
         </button>
       </div>

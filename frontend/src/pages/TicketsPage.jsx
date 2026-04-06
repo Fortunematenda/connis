@@ -279,7 +279,7 @@ export default function TicketsPage() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
             <span>Tickets</span> <span>/</span> <span className="text-gray-600 font-medium">{view === 'dashboard' ? 'Dashboard' : 'List'}</span>
@@ -310,8 +310,8 @@ export default function TicketsPage() {
 
       {/* Create modal */}
       {showCreate && (
-        <div className="fixed inset-0 bg-black/30 z-50 flex items-start justify-center pt-20" onClick={(e) => e.target === e.currentTarget && setShowCreate(false)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 space-y-4">
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-start justify-center pt-8 md:pt-20 px-4" onClick={(e) => e.target === e.currentTarget && setShowCreate(false)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-4 md:p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-gray-900">Create Ticket</h3>
               <button onClick={() => setShowCreate(false)} className="p-1 hover:bg-gray-100 rounded"><X size={18} className="text-gray-400" /></button>
@@ -472,7 +472,7 @@ export default function TicketsPage() {
                 <div className="relative">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input type="text" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                    placeholder="Search..." className="pl-9 pr-4 py-2 border rounded-lg text-sm w-56 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
+                    placeholder="Search..." className="pl-9 pr-4 py-2 border rounded-lg text-sm w-full sm:w-56 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
                 </div>
               </div>
 
@@ -554,7 +554,7 @@ export default function TicketsPage() {
                   </div>
 
                   {/* Pagination */}
-                  <div className="flex items-center justify-between px-4 py-3 border-t text-sm">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t text-sm">
                     <p className="text-xs text-gray-500">
                       Showing {(page - 1) * perPage + 1} to {Math.min(page * perPage, filtered.length)} of {filtered.length} entries
                     </p>

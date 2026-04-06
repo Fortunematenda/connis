@@ -162,7 +162,7 @@ export default function StaffPage() {
   return (
     <div>
       {/* Breadcrumb header */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
           <p className="text-xs text-blue-500 font-medium mb-0.5">Administration /</p>
           <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">

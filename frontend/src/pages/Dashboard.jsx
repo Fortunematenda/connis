@@ -378,14 +378,14 @@ function StatCard({ icon, label, value, sub, color, link }) {
 
   return (
     <Wrapper {...wrapperProps}
-      className="bg-white rounded-xl border shadow-sm p-5 hover:shadow-md transition-shadow cursor-pointer group">
+      className="bg-white rounded-xl border shadow-sm p-3 md:p-5 hover:shadow-md transition-shadow cursor-pointer group">
       <div className="flex items-center justify-between mb-3">
         <div className={`p-2.5 rounded-lg ${colorMap[color] || colorMap.blue}`}>
           {icon}
         </div>
         {link && <ArrowUpRight size={14} className="text-gray-300 group-hover:text-gray-500 transition-colors" />}
       </div>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
+      <p className="text-xl md:text-2xl font-bold text-gray-900">{value}</p>
       <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
       <p className="text-[11px] font-medium text-gray-500 mt-1">{label}</p>
     </Wrapper>

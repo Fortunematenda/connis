@@ -26,7 +26,7 @@ export default function PortalProfile() {
       </div>
 
       {/* Avatar + Name */}
-      <div className="bg-white rounded-xl border p-6 flex items-center gap-4">
+      <div className="bg-white rounded-xl border p-4 sm:p-6 flex items-center gap-4">
         <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
           {(user.full_name || user.username || 'U')[0].toUpperCase()}
         </div>
@@ -48,7 +48,7 @@ export default function PortalProfile() {
         </div>
         <div className="divide-y">
           {fields.map(({ icon: Icon, label, value, mono, color }) => (
-            <div key={label} className="px-5 py-3.5 flex items-center justify-between">
+            <div key={label} className="px-4 sm:px-5 py-3.5 flex items-center justify-between gap-2">
               <div className="flex items-center gap-3 text-sm text-gray-500">
                 <Icon size={16} className="text-gray-400" />
                 {label}
