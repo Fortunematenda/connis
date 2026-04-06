@@ -506,6 +506,10 @@ export const invoicesApi = {
     });
     return handleResponse(res);
   },
+  credit: async (id) => {
+    const res = await authFetch(`${API_BASE}/invoices/${id}/credit`, { method: 'POST' });
+    return handleResponse(res);
+  },
 };
 
 // ── Quotes API (admin) ────────────────────────────────────────

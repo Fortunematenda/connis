@@ -13,6 +13,7 @@ const STATUS_META = {
   draft:     { label: 'Draft',     icon: FileText,       color: 'bg-gray-100 text-gray-600',      dot: 'bg-gray-400' },
   overdue:   { label: 'Overdue',   icon: AlertTriangle,  color: 'bg-red-50 text-red-700',         dot: 'bg-red-500' },
   cancelled: { label: 'Cancelled', icon: XCircle,        color: 'bg-orange-50 text-orange-600',   dot: 'bg-orange-400' },
+  credited:  { label: 'Credited',  icon: XCircle,        color: 'bg-purple-50 text-purple-700',   dot: 'bg-purple-500' },
 };
 
 const TYPE_LABEL = {
@@ -128,12 +129,12 @@ export default function InvoicesPage() {
     } catch (err) { toast.error(err.message || 'Failed'); }
   };
 
-  const handleCancel = async (id) => {
+  const handleCredit = async (id) => {
     try {
-      await invoicesApi.updateStatus(id, 'cancelled');
-      toast.success('Invoice cancelled');
+      const res = await invoicesApi.credit(id);
+      toast.success(`Credit note ${res.data.credit_note.credit_number} created`);
       fetchData();
-    } catch (err) { toast.error(err.message || 'Failed'); }
+    } catch (err) { toast.error(err.message || 'Failed to credit'); }
   };
 
   return (
@@ -361,10 +362,10 @@ export default function InvoicesPage() {
                               Mark Paid
                             </button>
                           )}
-                          {(inv.status === 'issued' || inv.status === 'draft') && (
-                            <button onClick={() => handleCancel(inv.id)}
-                              className="px-2 py-1 text-[10px] font-medium text-gray-500 bg-gray-100 rounded-md hover:bg-gray-200">
-                              Cancel
+                          {inv.status === 'issued' && (
+                            <button onClick={() => handleCredit(inv.id)}
+                              className="px-2 py-1 text-[10px] font-medium text-purple-700 bg-purple-50 rounded-md hover:bg-purple-100">
+                              Credit
                             </button>
                           )}
                           <button onClick={() => handleExpand(inv.id)}
@@ -490,6 +491,12 @@ export default function InvoicesPage() {
                       <button onClick={() => { handleMarkPaid(detail.id); setExpanded(null); setDetail(null); }}
                         className="px-4 py-2 text-sm font-medium text-white bg-emerald-500 rounded-lg hover:bg-emerald-600">
                         Mark as Paid
+                      </button>
+                    )}
+                    {detail.status === 'issued' && (
+                      <button onClick={() => { handleCredit(detail.id); setExpanded(null); setDetail(null); }}
+                        className="px-4 py-2 text-sm font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100">
+                        Credit
                       </button>
                     )}
                     <button onClick={() => navigate(`/customers/${detail.user_id}?tab=invoices`)}

@@ -9,6 +9,7 @@ const STATUS_META = {
   draft:     { label: 'Draft',     icon: FileText,       color: 'bg-gray-100 text-gray-600',      dot: 'bg-gray-400' },
   overdue:   { label: 'Overdue',   icon: AlertTriangle,  color: 'bg-red-50 text-red-700',         dot: 'bg-red-500' },
   cancelled: { label: 'Cancelled', icon: XCircle,        color: 'bg-orange-50 text-orange-600',   dot: 'bg-orange-400' },
+  credited:  { label: 'Credited',  icon: XCircle,        color: 'bg-purple-50 text-purple-700',   dot: 'bg-purple-500' },
 };
 
 const TYPE_LABEL = {
@@ -65,12 +66,12 @@ export default function CustomerInvoices({ customerId }) {
     } catch (err) { toast.error(err.message || 'Failed to update'); }
   };
 
-  const handleCancel = async (id) => {
+  const handleCredit = async (id) => {
     try {
-      await invoicesApi.updateStatus(id, 'cancelled');
-      toast.success('Invoice cancelled');
+      const res = await invoicesApi.credit(id);
+      toast.success(`Credit note ${res.data.credit_note.credit_number} created`);
       fetchInvoices();
-    } catch (err) { toast.error(err.message || 'Failed to cancel'); }
+    } catch (err) { toast.error(err.message || 'Failed to credit'); }
   };
 
   return (
@@ -84,7 +85,7 @@ export default function CustomerInvoices({ customerId }) {
           <option value="paid">Paid</option>
           <option value="issued">Issued</option>
           <option value="overdue">Overdue</option>
-          <option value="cancelled">Cancelled</option>
+          <option value="credited">Credited</option>
         </select>
       </div>
 
@@ -196,10 +197,10 @@ export default function CustomerInvoices({ customerId }) {
                               Mark as Paid
                             </button>
                           )}
-                          {(inv.status === 'issued' || inv.status === 'draft') && (
-                            <button onClick={() => handleCancel(inv.id)}
-                              className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">
-                              Cancel
+                          {inv.status === 'issued' && (
+                            <button onClick={() => handleCredit(inv.id)}
+                              className="px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100">
+                              Credit
                             </button>
                           )}
                         </div>

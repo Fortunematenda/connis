@@ -165,20 +165,19 @@ const createManualInvoice = async (req, res, next) => {
   }
 };
 
-// PUT /invoices/:id/status — Update invoice status (e.g. mark paid, cancel)
+// PUT /invoices/:id/status — Update invoice status (mark paid, overdue)
 const updateInvoiceStatus = async (req, res, next) => {
   const client = await pool.connect();
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const validStatuses = ['draft', 'issued', 'paid', 'cancelled', 'overdue'];
+    const validStatuses = ['draft', 'issued', 'paid', 'overdue'];
     if (!validStatuses.includes(status)) {
       throw new ApiError(400, `Invalid status. Must be one of: ${validStatuses.join(', ')}`);
     }
 
     await client.query('BEGIN');
 
-    // Fetch current invoice
     const invRes = await client.query(
       'SELECT * FROM invoices WHERE id = $1 AND company_id = $2 FOR UPDATE',
       [id, req.companyId]
@@ -206,27 +205,12 @@ const updateInvoiceStatus = async (req, res, next) => {
       });
     }
 
-    if (status === 'cancelled' && invoice.status === 'issued') {
-      // Reverse the debit if cancelling an issued invoice
-      await recordTransaction(client, {
-        companyId: req.companyId,
-        userId: invoice.user_id,
-        amount: parseFloat(invoice.total),
-        type: 'credit',
-        category: 'adjustment',
-        description: `Invoice cancelled: ${invoice.invoice_number}`,
-        reference: invoice.invoice_number,
-        createdBy: req.adminId || null,
-      });
-    }
-
     const result = await client.query(
       `UPDATE invoices SET ${updates.join(', ')} WHERE id = $2 AND company_id = $3 RETURNING *`,
       params
     );
 
     await client.query('COMMIT');
-
     res.json({ success: true, data: result.rows[0] });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -236,4 +220,85 @@ const updateInvoiceStatus = async (req, res, next) => {
   }
 };
 
-module.exports = { getInvoices, getUserInvoices, getInvoiceById, createManualInvoice, updateInvoiceStatus };
+// POST /invoices/:id/credit — Credit an invoice (create credit note + reverse debit)
+const creditInvoice = async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+
+    await client.query('BEGIN');
+
+    const invRes = await client.query(
+      'SELECT * FROM invoices WHERE id = $1 AND company_id = $2 FOR UPDATE',
+      [id, req.companyId]
+    );
+    if (invRes.rows.length === 0) throw new ApiError(404, 'Invoice not found');
+    const invoice = invRes.rows[0];
+    if (invoice.status === 'credited') throw new ApiError(400, 'Invoice already credited');
+
+    // Generate credit note number
+    const now = new Date();
+    const cnPrefix = `CN-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const cnSeqRes = await client.query(
+      `SELECT credit_number FROM credit_notes WHERE company_id = $1 AND credit_number LIKE $2 ORDER BY credit_number DESC LIMIT 1`,
+      [req.companyId, `${cnPrefix}-%`]
+    );
+    let cnSeq = 1;
+    if (cnSeqRes.rows.length > 0) {
+      const l = parseInt(cnSeqRes.rows[0].credit_number.split('-').pop(), 10);
+      if (!isNaN(l)) cnSeq = l + 1;
+    }
+    const creditNumber = `${cnPrefix}-${String(cnSeq).padStart(4, '0')}`;
+
+    // Record credit transaction — reverse the debit
+    const tx = await recordTransaction(client, {
+      companyId: req.companyId,
+      userId: invoice.user_id,
+      amount: parseFloat(invoice.total),
+      type: 'credit',
+      category: 'refund',
+      description: `Credit note ${creditNumber} for ${invoice.invoice_number}`,
+      reference: creditNumber,
+      createdBy: req.adminId || null,
+    });
+
+    // Create credit note
+    const cnRes = await client.query(
+      `INSERT INTO credit_notes (company_id, user_id, credit_number, status, subtotal, tax, total,
+        notes, invoice_id, transaction_id, created_by)
+       VALUES ($1,$2,$3,'applied',$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [req.companyId, invoice.user_id, creditNumber, invoice.subtotal, invoice.tax, invoice.total,
+       `Credit for invoice ${invoice.invoice_number}`, invoice.id, tx.id, req.adminId || null]
+    );
+
+    // Copy invoice line items to credit note items
+    const itemsRes = await client.query('SELECT * FROM invoice_items WHERE invoice_id = $1', [id]);
+    for (const item of itemsRes.rows) {
+      await client.query(
+        `INSERT INTO credit_note_items (credit_note_id, description, quantity, unit_price, total)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [cnRes.rows[0].id, item.description, item.quantity, item.unit_price, item.total]
+      );
+    }
+
+    // Mark invoice as credited
+    await client.query(
+      "UPDATE invoices SET status = 'credited', updated_at = NOW() WHERE id = $1",
+      [id]
+    );
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      data: { invoice_id: id, credit_note: cnRes.rows[0] },
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
+module.exports = { getInvoices, getUserInvoices, getInvoiceById, createManualInvoice, updateInvoiceStatus, creditInvoice };
