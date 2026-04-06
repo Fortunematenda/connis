@@ -15,7 +15,11 @@ const getCustomers = async (req, res, next) => {
     let query = `
       SELECT
         u.id, u.username, u.full_name, u.email, u.phone, u.address,
-        u.balance, u.active, u.seq_id, u.created_at,
+        COALESCE((
+          SELECT SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE -t.amount END)
+          FROM transactions t WHERE t.user_id = u.id
+        ), 0) AS balance,
+        u.active, u.seq_id, u.created_at,
         p.id AS plan_id, p.name AS plan_name,
         p.download_speed, p.upload_speed, p.price AS plan_price,
         up.start_date AS plan_start_date,
@@ -59,7 +63,11 @@ const getCustomerById = async (req, res, next) => {
     const result = await pool.query(
       `SELECT
         u.id, u.username, u.full_name, u.email, u.phone, u.address,
-        u.balance, u.active, u.created_at, u.updated_at,
+        COALESCE((
+          SELECT SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE -t.amount END)
+          FROM transactions t WHERE t.user_id = u.id
+        ), 0) AS balance,
+        u.active, u.created_at, u.updated_at,
         p.id AS plan_id, p.name AS plan_name,
         p.download_speed, p.upload_speed, p.price AS plan_price,
         up.start_date AS plan_start_date, up.end_date AS plan_end_date,

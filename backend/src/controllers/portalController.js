@@ -70,7 +70,11 @@ const getMe = async (req, res, next) => {
     // Get user + active plan
     const userRes = await pool.query(
       `SELECT u.id, u.username, u.full_name, u.email, u.phone, u.address,
-              u.balance, u.active, u.seq_id, u.created_at,
+              COALESCE((
+                SELECT SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE -t.amount END)
+                FROM transactions t WHERE t.user_id = u.id
+              ), 0) AS balance,
+              u.active, u.seq_id, u.created_at,
               p.name AS plan_name, p.download_speed, p.upload_speed, p.price AS plan_price,
               p.billing_type,
               up.start_date AS plan_start, up.end_date AS plan_end
