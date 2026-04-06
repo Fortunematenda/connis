@@ -517,19 +517,43 @@ export default function CustomerDetailPage() {
               </div>
             )}
 
-            {/* New plan selection — dropdown */}
+            {/* New plan selection — scrollable dropdown */}
             <div className="px-6 pt-4 space-y-4">
               <div>
                 <p className="text-[11px] text-gray-400 uppercase tracking-wider font-medium mb-1.5">New Plan</p>
-                <select value={newPlanId} onChange={(e) => setNewPlanId(e.target.value)}
-                  className="w-full px-3 py-2.5 border rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-purple-400/20 focus:border-purple-400">
-                  <option value="">— Select a plan —</option>
-                  {plans.filter(p => p.id !== customer.plan_id).map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} — {p.download_speed}/{p.upload_speed} — R{parseFloat(p.price).toFixed(2)}/mo
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  {/* Selected value display */}
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('plan-dropdown').classList.toggle('hidden')}
+                    className="w-full px-3 py-2.5 border rounded-lg text-sm bg-white text-left outline-none focus:ring-2 focus:ring-purple-400/20 focus:border-purple-400 flex items-center justify-between"
+                  >
+                    <span className={newPlanId ? 'text-gray-900' : 'text-gray-400'}>
+                      {newPlanId ? plans.find(p => p.id === newPlanId)?.name + ' — ' + plans.find(p => p.id === newPlanId)?.download_speed + '/' + plans.find(p => p.id === newPlanId)?.upload_speed + ' — R' + parseFloat(plans.find(p => p.id === newPlanId)?.price || 0).toFixed(2) + '/mo' : '— Select a plan —'}
+                    </span>
+                    <ChevronRight size={16} className="text-gray-400 rotate-90" />
+                  </button>
+                  
+                  {/* Scrollable dropdown */}
+                  <div id="plan-dropdown" className="hidden absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    <div
+                      className={`px-3 py-2 text-sm cursor-pointer hover:bg-purple-50 ${!newPlanId ? 'bg-purple-50 text-purple-700' : 'text-gray-400'}`}
+                      onClick={() => { setNewPlanId(''); document.getElementById('plan-dropdown').classList.add('hidden'); }}
+                    >
+                      — Select a plan —
+                    </div>
+                    {plans.filter(p => p.id !== customer.plan_id).map((p) => (
+                      <div
+                        key={p.id}
+                        className={`px-3 py-2 text-sm cursor-pointer hover:bg-purple-50 border-t border-gray-50 ${newPlanId === p.id ? 'bg-purple-50 text-purple-700' : 'text-gray-700'}`}
+                        onClick={() => { setNewPlanId(p.id); document.getElementById('plan-dropdown').classList.add('hidden'); }}
+                      >
+                        <span className="font-medium">{p.name}</span>
+                        <span className="text-gray-400 ml-2">— {p.download_speed}/{p.upload_speed} — R{parseFloat(p.price).toFixed(2)}/mo</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Dates */}
