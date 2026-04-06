@@ -12,6 +12,12 @@ const API_TARGET = process.env.API_URL || 'http://localhost:5001';
 app.use('/api', createProxyMiddleware({
   target: API_TARGET,
   changeOrigin: true,
+  pathRewrite: undefined,
+  on: {
+    proxyReq: (proxyReq, req) => {
+      proxyReq.path = '/api' + req.url;
+    },
+  },
 }));
 
 // Serve static files from dist
