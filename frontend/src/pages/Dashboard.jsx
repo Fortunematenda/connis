@@ -197,10 +197,10 @@ export default function Dashboard() {
           {data?.recent_tickets?.length > 0 ? (
             <div className="divide-y">
               {data.recent_tickets.map((t) => (
-                <div key={t.id} className="px-5 py-3 flex items-center justify-between">
+                <div key={t.id} onClick={() => navigate(`/tickets/${t.id}`)} className="px-5 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
                   <div>
                     <p className="text-sm font-medium text-gray-900">{t.subject}</p>
-                    <p className="text-[11px] text-gray-400">{t.customer_name || 'Unassigned'} &middot; {fmtDate(t.created_at)}</p>
+                    <p className="text-[11px] text-gray-400">{t.customer_name || 'Unassigned'} · {fmtDate(t.created_at)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${TICKET_STATUS_COLORS[t.status] || 'text-gray-600 bg-gray-100'}`}>
@@ -227,10 +227,10 @@ export default function Dashboard() {
           {data?.recent_leads?.length > 0 ? (
             <div className="divide-y">
               {data.recent_leads.map((l) => (
-                <div key={l.id} className="px-5 py-3 flex items-center justify-between">
+                <div key={l.id} onClick={() => navigate(`/leads?lead=${l.id}`)} className="px-5 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
                   <div>
                     <p className="text-sm font-medium text-gray-900">{l.full_name}</p>
-                    <p className="text-[11px] text-gray-400">{l.phone || '—'} &middot; {fmtDate(l.created_at)}</p>
+                    <p className="text-[11px] text-gray-400">{l.phone || '—'} · {fmtDate(l.created_at)}</p>
                   </div>
                   <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full capitalize ${LEAD_STATUS_COLORS[l.status] || 'text-gray-600 bg-gray-100'}`}>
                     {l.status?.replace('_', ' ')}
