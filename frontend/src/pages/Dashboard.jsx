@@ -140,22 +140,22 @@ export default function Dashboard() {
           icon={<Coins size={20} />}
           label="Monthly Revenue"
           value={fmtCurrency(c.monthly_revenue)}
-          sub={`${c.active_plans} active plans`}
+          sub={`${c.active_plans || 0} active plans`}
           color="violet"
           link="/plans"
         />
         <StatCard
           icon={<Ticket size={20} />}
           label="Open Tickets"
-          value={c.open_tickets}
-          sub={`${c.total_tickets} total`}
+          value={c.open_tickets || 0}
+          sub={`${c.total_tickets || 0} total`}
           color="amber"
           link="/tickets"
         />
         <StatCard
           icon={<Target size={20} />}
           label="Leads"
-          value={c.total_leads}
+          value={c.total_leads || 0}
           sub="in pipeline"
           color="purple"
           link="/leads"
@@ -163,8 +163,8 @@ export default function Dashboard() {
         <StatCard
           icon={<CheckSquare size={20} />}
           label="Pending Tasks"
-          value={c.pending_tasks}
-          sub={`${c.total_tasks} total`}
+          value={c.pending_tasks || 0}
+          sub={`${c.total_tasks || 0} total`}
           color="sky"
           link="/tasks"
         />

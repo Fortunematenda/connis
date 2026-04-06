@@ -14,7 +14,7 @@ const getDashboardStats = async (req, res, next) => {
     if (period === 'week') interval = '7 days';
     if (period === 'month') interval = '30 days';
 
-    // Run all queries in parallel
+    // Run all main DB queries in parallel
     const [
       customersRes,
       activeCustomersRes,
@@ -26,7 +26,7 @@ const getDashboardStats = async (req, res, next) => {
       tasksRes,
       pendingTasksRes,
       revenueRes,
-      recentCustomersRes,
+      allUsersRes,
       recentTicketsRes,
       recentLeadsRes,
     ] = await Promise.all([
@@ -48,18 +48,11 @@ const getDashboardStats = async (req, res, next) => {
       `, [companyId]),
       pool.query(`
         SELECT u.id, u.full_name, u.username, u.seq_id, u.active,
-          p.name AS plan_name,
-          COALESCE(SUM(r.acctinputoctets), 0) AS download_bytes,
-          COALESCE(SUM(r.acctoutputoctets), 0) AS upload_bytes,
-          COALESCE(SUM(r.acctsessiontime), 0) AS total_time
+          p.name AS plan_name
         FROM users u
         LEFT JOIN user_plans up ON u.id = up.user_id AND up.active = TRUE
         LEFT JOIN plans p ON up.plan_id = p.id
-        LEFT JOIN radacct r ON r.username = u.username AND r.acctstarttime >= (NOW() - INTERVAL '${interval}')
         WHERE u.company_id = $1
-        GROUP BY u.id, u.full_name, u.username, u.seq_id, u.active, p.name
-        ORDER BY SUM(r.acctinputoctets) DESC NULLS LAST
-        LIMIT 10
       `, [companyId]),
       pool.query(`
         SELECT t.id, t.subject, t.status, t.priority, t.created_at,
@@ -75,6 +68,42 @@ const getDashboardStats = async (req, res, next) => {
         ORDER BY created_at DESC LIMIT 5
       `, [companyId]),
     ]);
+
+    // Top bandwidth users — query RADIUS DB separately then merge
+    let topBandwidthUsers = [];
+    try {
+      const allUsers = allUsersRes.rows;
+      if (allUsers.length > 0) {
+        const usernames = allUsers.map(u => u.username);
+        const bandwidthRes = await radiusDb.query(
+          `SELECT username,
+            COALESCE(SUM(acctinputoctets), 0) AS download_bytes,
+            COALESCE(SUM(acctoutputoctets), 0) AS upload_bytes,
+            COALESCE(SUM(acctsessiontime), 0) AS total_time
+          FROM radacct
+          WHERE username = ANY($1) AND acctstarttime >= (NOW() - INTERVAL '${interval}')
+          GROUP BY username
+          ORDER BY SUM(acctinputoctets) DESC NULLS LAST
+          LIMIT 10`,
+          [usernames]
+        );
+        const bwMap = {};
+        bandwidthRes.rows.forEach(r => { bwMap[r.username] = r; });
+        // Merge user info with bandwidth data
+        topBandwidthUsers = allUsers
+          .map(u => ({
+            ...u,
+            download_bytes: bwMap[u.username]?.download_bytes || '0',
+            upload_bytes: bwMap[u.username]?.upload_bytes || '0',
+            total_time: bwMap[u.username]?.total_time || '0',
+          }))
+          .filter(u => parseInt(u.download_bytes) > 0)
+          .sort((a, b) => parseInt(b.download_bytes) - parseInt(a.download_bytes))
+          .slice(0, 10);
+      }
+    } catch (err) {
+      console.warn(`[DASHBOARD] Bandwidth query failed: ${err.message}`);
+    }
 
     // Get online count — only count sessions matching actual DB customers
     let onlineCount = 0;
@@ -125,7 +154,7 @@ const getDashboardStats = async (req, res, next) => {
         },
         lead_breakdown: leadBreakdown,
         ticket_breakdown: ticketBreakdown,
-        top_bandwidth_users: recentCustomersRes.rows,
+        top_bandwidth_users: topBandwidthUsers,
         recent_tickets: recentTicketsRes.rows,
         recent_leads: recentLeadsRes.rows,
       },
