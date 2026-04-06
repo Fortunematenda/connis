@@ -54,6 +54,11 @@ const backgroundSync = async (companyId) => {
 
     let imported = 0;
     let skipped = 0;
+
+    // Get current max seq_id to start from
+    const maxSeqRes = await pool.query('SELECT COALESCE(MAX(seq_id), 0) as max_seq FROM users WHERE company_id = $1', [companyId]);
+    let nextSeqId = (maxSeqRes.rows[0]?.max_seq || 0) + 1;
+
     for (const ru of radiusUsers.rows) {
       const username = ru.username;
 
@@ -66,9 +71,9 @@ const backgroundSync = async (companyId) => {
       try {
         await client.query('BEGIN');
         const userRes = await client.query(
-          `INSERT INTO users (company_id, username, full_name, password, active)
-           VALUES ($1, $2, $3, $4, TRUE) RETURNING id`,
-          [companyId, username, username, ru.password || '']
+          `INSERT INTO users (company_id, username, full_name, password, active, seq_id)
+           VALUES ($1, $2, $3, $4, TRUE, $5) RETURNING id`,
+          [companyId, username, username, ru.password || '', nextSeqId++]
         );
         const planId = profileToPlan[ru.groupname] || null;
         if (planId) {
