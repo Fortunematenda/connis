@@ -9,7 +9,7 @@ const EXCLUDED_PROFILES = ['vpn'];
 const EXCLUDED_USERNAMES = ['branch1', 'remote-admin', 'vpn'];
 
 // Background sync: import users from RADIUS DB (radcheck + radusergroup) as customers
-const backgroundSync = async (companyId) => {
+const backgroundSync = async (companyId, adminId = null) => {
   try {
     // 1. Get all RADIUS users with their passwords and groups
     const radiusUsers = await radiusDb.query(`
@@ -71,9 +71,14 @@ const backgroundSync = async (companyId) => {
       try {
         await client.query('BEGIN');
         const userRes = await client.query(
-          `INSERT INTO users (company_id, username, full_name, password, active, seq_id)
-           VALUES ($1, $2, $3, $4, TRUE, $5) RETURNING id`,
-          [companyId, username, username, ru.password || '', nextSeqId++]
+          adminId
+            ? `INSERT INTO users (company_id, username, full_name, password, active, seq_id, created_by)
+               VALUES ($1, $2, $3, $4, TRUE, $5, $6) RETURNING id`
+            : `INSERT INTO users (company_id, username, full_name, password, active, seq_id)
+               VALUES ($1, $2, $3, $4, TRUE, $5) RETURNING id`,
+          adminId
+            ? [companyId, username, username, ru.password || '', nextSeqId++, adminId]
+            : [companyId, username, username, ru.password || '', nextSeqId++]
         );
         const planId = profileToPlan[ru.groupname] || null;
         if (planId) {
@@ -117,8 +122,8 @@ const addRouter = async (req, res, next) => {
 
     res.status(201).json({ success: true, data: result.rows[0] });
 
-    // Auto-sync customers from RADIUS DB in background
-    backgroundSync(companyId).catch(() => {});
+    // Auto-sync customers from RADIUS DB in background (pass admin who added the router)
+    backgroundSync(companyId, req.adminId).catch(() => {});
   } catch (err) {
     next(err);
   }
