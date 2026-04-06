@@ -8,6 +8,7 @@ import PlansPage from './pages/PlansPage';
 import CustomersPage from './pages/CustomersPage';
 import CustomerDetailPage from './pages/CustomerDetailPage';
 import SettingsPage from './pages/SettingsPage';
+import NetworkPage from './pages/NetworkPage';
 import TicketsPage from './pages/TicketsPage';
 import TasksPage from './pages/TasksPage';
 import LoginPage from './pages/LoginPage';
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="/vouchers" element={<VouchersPage />} />
         <Route path="/messages" element={<MessagesPage />} />
         <Route path="/messages/:userId" element={<MessagesPage />} />
+        <Route path="/network" element={<NetworkPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
       {/* Customer Portal — separate from admin */}

@@ -11,6 +11,7 @@ import {
   MessageSquare,
   Settings,
   LogOut,
+  Globe,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -24,6 +25,7 @@ const navItems = [
   { to: '/plans', icon: Wifi, label: 'Plans' },
   { to: '/vouchers', icon: TicketCheck, label: 'Vouchers' },
   { to: '/staff', icon: Shield, label: 'Staff' },
+  { to: '/network', icon: Globe, label: 'Network' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
