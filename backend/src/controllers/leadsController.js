@@ -14,10 +14,10 @@ const createLead = async (req, res, next) => {
     const companyId = req.companyId;
 
     const result = await pool.query(
-      `INSERT INTO leads (company_id, full_name, phone, email, address, notes, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'new')
+      `INSERT INTO leads (company_id, full_name, phone, email, address, notes, status, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, 'new', $7)
        RETURNING *`,
-      [companyId, full_name, phone, email, address, notes || null]
+      [companyId, full_name, phone, email, address, notes || null, req.adminId || null]
     );
 
     res.status(201).json({
@@ -35,18 +35,21 @@ const getLeads = async (req, res, next) => {
     const { status } = req.query;
 
     const companyId = req.companyId;
-    let query = 'SELECT * FROM leads WHERE company_id = $1';
+    let query = `SELECT l.*, ca.full_name AS created_by_name
+      FROM leads l
+      LEFT JOIN company_admins ca ON l.created_by = ca.id
+      WHERE l.company_id = $1`;
     const params = [companyId];
 
     if (status) {
       if (!VALID_STATUSES.includes(status)) {
         throw new ApiError(400, `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
       }
-      query += ' AND status = $2';
+      query += ' AND l.status = $2';
       params.push(status);
     }
 
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY l.created_at DESC';
 
     const result = await pool.query(query, params);
 
@@ -95,7 +98,13 @@ const getLeadById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const result = await pool.query('SELECT * FROM leads WHERE id = $1 AND company_id = $2', [id, req.companyId]);
+    const result = await pool.query(
+      `SELECT l.*, ca.full_name AS created_by_name
+       FROM leads l
+       LEFT JOIN company_admins ca ON l.created_by = ca.id
+       WHERE l.id = $1 AND l.company_id = $2`,
+      [id, req.companyId]
+    );
 
     if (result.rows.length === 0) {
       throw new ApiError(404, 'Lead not found');
@@ -114,7 +123,7 @@ const getLeadById = async (req, res, next) => {
 const addComment = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { content, author } = req.body;
+    const { content } = req.body;
 
     // Verify lead exists and belongs to company
     const lead = await pool.query('SELECT id FROM leads WHERE id = $1 AND company_id = $2', [id, req.companyId]);
@@ -122,11 +131,15 @@ const addComment = async (req, res, next) => {
       throw new ApiError(404, 'Lead not found');
     }
 
+    // Get admin name
+    const adminRes = await pool.query('SELECT full_name FROM company_admins WHERE id = $1', [req.adminId]);
+    const authorName = adminRes.rows[0]?.full_name || 'Admin';
+
     const result = await pool.query(
       `INSERT INTO lead_comments (lead_id, author, content)
        VALUES ($1, $2, $3)
        RETURNING *`,
-      [id, author || 'Admin', content]
+      [id, authorName, content]
     );
 
     res.status(201).json({

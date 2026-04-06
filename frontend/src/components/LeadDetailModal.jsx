@@ -172,6 +172,10 @@ export default function LeadDetailModal({ lead, isOpen, onClose, onLeadUpdated }
                 <MapPin size={14} className="text-gray-400" /> {lead.address}
               </div>
             )}
+            <div className="text-[11px] text-gray-400 pt-1">
+              Created {new Date(lead.created_at).toLocaleDateString()}
+              {lead.created_by_name && <span> by <span className="font-medium text-gray-500">{lead.created_by_name}</span></span>}
+            </div>
           </div>
 
           {/* Comments section */}

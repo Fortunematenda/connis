@@ -73,6 +73,7 @@ ALTER TABLE leads ADD COLUMN IF NOT EXISTS converted_to UUID REFERENCES users(id
 ALTER TABLE sessions ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE;
 ALTER TABLE company_admins ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
 ALTER TABLE documents ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES company_admins(id) ON DELETE SET NULL;
 
 -- ============================================================
 -- 1. USERS — ISP subscribers / customers (per company)

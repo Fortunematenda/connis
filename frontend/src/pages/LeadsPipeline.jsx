@@ -202,7 +202,7 @@ export default function LeadsPipeline() {
                 <th className="px-4 py-3 font-medium">Contact</th>
                 <th className="px-4 py-3 font-medium">Address</th>
                 <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Source</th>
+                <th className="px-4 py-3 font-medium">Created By</th>
                 <th className="px-4 py-3 font-medium">Created</th>
               </tr>
             </thead>
@@ -228,7 +228,7 @@ export default function LeadsPipeline() {
                       {STAGES.find(s => s.key === lead.status)?.label || lead.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{lead.source || '—'}</td>
+                  <td className="px-4 py-3 text-gray-600">{lead.created_by_name || '—'}</td>
                   <td className="px-4 py-3 text-xs text-gray-500">{new Date(lead.created_at).toLocaleDateString()}</td>
                 </tr>
               ))}

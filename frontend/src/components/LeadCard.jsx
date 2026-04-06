@@ -65,9 +65,10 @@ export default function LeadCard({ lead, onClick }) {
         )}
       </div>
 
-      {/* Created date */}
+      {/* Created date + by */}
       <div className="mt-2 ml-6 text-[10px] text-gray-400">
         {new Date(lead.created_at).toLocaleDateString()}
+        {lead.created_by_name && <span> · by {lead.created_by_name}</span>}
       </div>
     </div>
   );
