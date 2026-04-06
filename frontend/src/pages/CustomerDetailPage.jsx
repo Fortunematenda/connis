@@ -5,7 +5,7 @@ import {
   Edit3, Save, X, Globe, Clock, DollarSign, User, Shield, Activity,
   ChevronRight, Copy, Check, Eye, EyeOff, MessageSquare, Ticket,
   FileText, Package, Plus, Power, PowerOff, MoreVertical, BarChart3,
-  RefreshCw, Calendar, ArrowRight,
+  RefreshCw, Calendar, ArrowRight, Trash2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { customersApi, plansApi, usersApi } from '../services/api';
@@ -159,6 +159,15 @@ export default function CustomerDetailPage() {
       toast.success('Pending plan change cancelled');
       fetchData();
     } catch (err) { toast.error(err.message); }
+  };
+
+  const handleDeleteCustomer = async () => {
+    if (!window.confirm(`Are you sure you want to delete customer "${customer.full_name || customer.username}"? This action cannot be undone.`)) return;
+    try {
+      await customersApi.remove(id);
+      toast.success('Customer deleted');
+      navigate('/customers');
+    } catch (err) { toast.error(err.message || 'Failed to delete customer'); }
   };
 
   const copyUsername = () => {
@@ -484,6 +493,11 @@ export default function CustomerDetailPage() {
             <button onClick={() => setActionsOpen(false)}
               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
               <RefreshCw size={15} /> Restart Session
+            </button>
+            <div className="border-t my-1" />
+            <button onClick={() => { handleDeleteCustomer(); setActionsOpen(false); }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
+              <Trash2 size={15} /> Delete Customer
             </button>
           </div>
         </>
