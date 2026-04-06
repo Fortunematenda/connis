@@ -267,8 +267,8 @@ export default function CustomerStatistics({ customerId }) {
         <div className="bg-gray-50 rounded-xl border p-4">
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">All-Time Summary</h3>
           <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-600">
-            <span>Total Download: <strong className="text-gray-800">{fmtBytes(stats.all_time.download)}</strong></span>
-            <span>Total Upload: <strong className="text-gray-800">{fmtBytes(stats.all_time.upload)}</strong></span>
+            <span>Total Download: <strong className="text-gray-800">{fmtBytes(stats.all_time.upload)}</strong></span>
+            <span>Total Upload: <strong className="text-gray-800">{fmtBytes(stats.all_time.download)}</strong></span>
             <span>Total Online: <strong className="text-gray-800">{fmtDuration(stats.all_time.session_time)}</strong></span>
             <span>Sessions: <strong className="text-gray-800">{stats.all_time.sessions}</strong></span>
             {stats.all_time.first_session && <span>First: <strong className="text-gray-800">{fmtDate(stats.all_time.first_session)}</strong></span>}
