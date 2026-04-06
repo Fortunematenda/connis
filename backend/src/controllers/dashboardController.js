@@ -10,6 +10,7 @@ const getDashboardStats = async (req, res, next) => {
     const [
       customersRes,
       activeCustomersRes,
+      inactiveCustomersRes,
       leadsRes,
       plansRes,
       ticketsRes,
@@ -23,6 +24,7 @@ const getDashboardStats = async (req, res, next) => {
     ] = await Promise.all([
       pool.query('SELECT COUNT(*) FROM users WHERE company_id = $1', [companyId]),
       pool.query('SELECT COUNT(*) FROM users WHERE company_id = $1 AND active = TRUE', [companyId]),
+      pool.query('SELECT COUNT(*) FROM users WHERE company_id = $1 AND active = FALSE', [companyId]),
       pool.query('SELECT COUNT(*) FROM leads WHERE company_id = $1', [companyId]),
       pool.query('SELECT COUNT(*) FROM plans WHERE company_id = $1 AND active = TRUE', [companyId]),
       pool.query('SELECT COUNT(*) FROM tickets WHERE company_id = $1', [companyId]),
@@ -96,7 +98,9 @@ const getDashboardStats = async (req, res, next) => {
         counts: {
           total_customers: parseInt(customersRes.rows[0].count),
           active_customers: parseInt(activeCustomersRes.rows[0].count),
+          inactive_customers: parseInt(inactiveCustomersRes.rows[0].count),
           online_customers: onlineCount,
+          offline_customers: parseInt(customersRes.rows[0].count) - onlineCount,
           total_leads: parseInt(leadsRes.rows[0].count),
           active_plans: parseInt(plansRes.rows[0].count),
           total_tickets: parseInt(ticketsRes.rows[0].count),

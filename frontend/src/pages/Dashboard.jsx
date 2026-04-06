@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Users, UserCheck, Wifi, WifiOff, Target, Ticket, CheckSquare,
-  DollarSign, ArrowRight, ArrowUpRight, ArrowDownRight, Loader2,
-  AlertTriangle, TrendingUp, Clock, BarChart3,
+  DollarSign, ArrowRight, ArrowUpRight, Loader2,
+  AlertTriangle, Clock, BarChart3, Ban, Power,
 } from 'lucide-react';
 import { dashboardApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -84,24 +84,49 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── Stat Cards Row 1 ── */}
+      {/* ── Main Stats Grid ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Customers */}
         <StatCard
-          icon={<Users size={20} />}
+          icon={<Users size={22} />}
           label="Total Customers"
           value={c.total_customers}
-          sub={`${c.active_customers} active`}
+          sub="all customers"
           color="blue"
           link="/customers"
         />
+        {/* Online Now */}
         <StatCard
-          icon={<Wifi size={20} />}
+          icon={<Wifi size={22} />}
           label="Online Now"
           value={c.online_customers}
-          sub={`of ${c.active_customers} active`}
+          sub={`${c.active_customers} active customers`}
           color="emerald"
           link="/customers"
+          highlight={c.online_customers > 0}
         />
+        {/* Active but Offline */}
+        <StatCard
+          icon={<WifiOff size={22} />}
+          label="Active but Offline"
+          value={Math.max(0, c.active_customers - c.online_customers)}
+          sub="not currently using"
+          color="amber"
+          link="/customers"
+        />
+        {/* Blocked / Inactive */}
+        <StatCard
+          icon={<Ban size={22} />}
+          label="Blocked"
+          value={c.inactive_customers || 0}
+          sub="inactive customers"
+          color="red"
+          link="/customers"
+        />
+      </div>
+
+      {/* ── Secondary Stats Row ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={<DollarSign size={20} />}
           label="Monthly Revenue"
@@ -118,10 +143,6 @@ export default function Dashboard() {
           color="amber"
           link="/tickets"
         />
-      </div>
-
-      {/* ── Stat Cards Row 2 ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={<Target size={20} />}
           label="Leads"
@@ -137,22 +158,6 @@ export default function Dashboard() {
           sub={`${c.total_tasks} total`}
           color="sky"
           link="/tasks"
-        />
-        <StatCard
-          icon={<WifiOff size={20} />}
-          label="Offline"
-          value={Math.max(0, c.active_customers - c.online_customers)}
-          sub="customers"
-          color="red"
-          link="/customers"
-        />
-        <StatCard
-          icon={<UserCheck size={20} />}
-          label="Active Plans"
-          value={c.active_plans}
-          sub="service packages"
-          color="teal"
-          link="/plans"
         />
       </div>
 
