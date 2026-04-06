@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Settings, Router, Wifi, WifiOff, Plus, Trash2, TestTube, Building2, Pencil, X, Check, Loader2, FileText, Activity, AlertTriangle, UserCheck, XCircle, Terminal, Filter, Download, RefreshCw } from 'lucide-react';
+import { Settings, Router, Wifi, WifiOff, Plus, Trash2, TestTube, Building2, Pencil, X, Check, Loader2, FileText, Activity, AlertTriangle, UserCheck, XCircle, Terminal, Filter, Download, RefreshCw, ChevronRight, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { routersApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
