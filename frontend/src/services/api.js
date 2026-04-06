@@ -510,4 +510,24 @@ export const portalApi = {
     });
     return handlePortalResponse(res);
   },
+  getTickets: async () => {
+    const res = await portalFetch(`${API_BASE}/portal/tickets`);
+    return handlePortalResponse(res);
+  },
+  createTicket: async (subject, description, priority = 'medium') => {
+    const res = await portalFetch(`${API_BASE}/portal/tickets`, {
+      method: 'POST', body: JSON.stringify({ subject, description, priority }),
+    });
+    return handlePortalResponse(res);
+  },
+  getTicket: async (id) => {
+    const res = await portalFetch(`${API_BASE}/portal/tickets/${id}`);
+    return handlePortalResponse(res);
+  },
+  addTicketComment: async (id, content) => {
+    const res = await portalFetch(`${API_BASE}/portal/tickets/${id}/comments`, {
+      method: 'POST', body: JSON.stringify({ content }),
+    });
+    return handlePortalResponse(res);
+  },
 };

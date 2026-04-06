@@ -14,7 +14,12 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import VouchersPage from './pages/VouchersPage';
 import PortalLogin from './pages/portal/PortalLogin';
+import PortalLayout from './components/portal/PortalLayout';
 import PortalDashboard from './pages/portal/PortalDashboard';
+import PortalServices from './pages/portal/PortalServices';
+import PortalFinance from './pages/portal/PortalFinance';
+import PortalTickets from './pages/portal/PortalTickets';
+import PortalProfile from './pages/portal/PortalProfile';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -48,7 +53,13 @@ export default function App() {
       </Route>
       {/* Customer Portal — separate from admin */}
       <Route path="/portal/login" element={<PortalLogin />} />
-      <Route path="/portal" element={<PortalDashboard />} />
+      <Route path="/portal" element={<PortalLayout />}>
+        <Route index element={<PortalDashboard />} />
+        <Route path="services" element={<PortalServices />} />
+        <Route path="finance" element={<PortalFinance />} />
+        <Route path="tickets" element={<PortalTickets />} />
+        <Route path="profile" element={<PortalProfile />} />
+      </Route>
     </Routes>
   );
 }

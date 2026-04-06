@@ -1,54 +1,25 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useOutletContext, Link } from 'react-router-dom';
 import {
-  Wifi, WifiOff, Wallet, CreditCard, ArrowDownCircle, ArrowUpCircle,
-  Loader2, LogOut, TicketCheck, RefreshCw, Globe,
+  Wifi, WifiOff, CreditCard, ArrowDownCircle, ArrowUpCircle,
+  Loader2, TicketCheck, Globe, ChevronRight, Headphones, Wallet,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { portalApi } from '../../services/api';
 
 const fmtCurrency = (v) => 'R' + Number(v || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 const fmtDateTime = (d) => d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
 
 export default function PortalDashboard() {
-  const navigate = useNavigate();
-  const [user, setUser] = useState(null);
+  const { user, refreshUser } = useOutletContext();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [voucherCode, setVoucherCode] = useState('');
   const [redeeming, setRedeeming] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const loadData = async () => {
-    try {
-      const [meRes, txRes] = await Promise.all([
-        portalApi.getMe(),
-        portalApi.getTransactions(20),
-      ]);
-      setUser(meRes.data);
-      setTransactions(txRes.data);
-    } catch (err) {
-      if (err.message?.includes('401') || err.message?.includes('token')) {
-        navigate('/portal/login');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    const token = localStorage.getItem('connis_portal_token');
-    if (!token) { navigate('/portal/login'); return; }
-    loadData();
+    portalApi.getTransactions(5).then(res => setTransactions(res.data)).catch(() => {}).finally(() => setLoading(false));
   }, []);
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-    toast.success('Refreshed');
-  };
 
   const handleRedeem = async (e) => {
     e.preventDefault();
@@ -58,7 +29,9 @@ export default function PortalDashboard() {
       const res = await portalApi.redeemVoucher(voucherCode.trim());
       toast.success(`Voucher redeemed! +${fmtCurrency(res.data.amount)}`);
       setVoucherCode('');
-      await loadData();
+      await refreshUser();
+      const txRes = await portalApi.getTransactions(5);
+      setTransactions(txRes.data);
     } catch (err) {
       toast.error(err.message || 'Invalid voucher');
     } finally {
@@ -66,199 +39,140 @@ export default function PortalDashboard() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('connis_portal_token');
-    localStorage.removeItem('connis_portal_user');
-    navigate('/portal/login');
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 size={32} className="animate-spin text-blue-500" />
-      </div>
-    );
-  }
-
   if (!user) return null;
-
   const balance = parseFloat(user.balance || 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
-      {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
-              <Wifi size={16} />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-gray-900">{user.company_name || 'My ISP'}</p>
-              <p className="text-[10px] text-gray-400">Customer Portal</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={handleRefresh} disabled={refreshing}
-              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
-              <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-            </button>
-            <button onClick={handleLogout}
-              className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50">
-              <LogOut size={16} />
-            </button>
-          </div>
-        </div>
-      </header>
+    <div className="space-y-5">
+      {/* Welcome */}
+      <div>
+        <h1 className="text-xl font-bold text-gray-900">Welcome back, {user.full_name || user.username}</h1>
+        <p className="text-sm text-gray-400 mt-0.5">Here's an overview of your account</p>
+      </div>
 
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-5">
-        {/* Welcome + Balance Card */}
-        <div className={`rounded-2xl p-5 text-white ${balance > 0 ? 'bg-gradient-to-br from-blue-600 to-indigo-700' : 'bg-gradient-to-br from-red-500 to-red-700'}`}>
-          <p className="text-sm opacity-80">Welcome back,</p>
-          <p className="text-lg font-bold mt-0.5">{user.full_name || user.username}</p>
-          <div className="mt-4 flex items-end justify-between">
-            <div>
-              <p className="text-xs opacity-70 uppercase tracking-wide">Your Balance</p>
-              <p className="text-3xl font-black mt-1">{fmtCurrency(balance)}</p>
-            </div>
-            <Wallet size={32} className="opacity-30" />
+      {/* Status Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Balance */}
+        <div className={`rounded-xl p-4 text-white ${balance > 0 ? 'bg-gradient-to-br from-blue-600 to-indigo-600' : 'bg-gradient-to-br from-red-500 to-red-600'}`}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs uppercase tracking-wider opacity-70">Balance</p>
+            <Wallet size={16} className="opacity-40" />
           </div>
-          {balance <= 0 && (
-            <div className="mt-3 bg-white/20 rounded-lg px-3 py-2 text-xs font-medium">
-              Your balance is empty. Redeem a voucher to get back online.
+          <p className="text-2xl font-black mt-2">{fmtCurrency(balance)}</p>
+          {balance <= 0 && <p className="text-[11px] mt-1.5 opacity-80">Top up to stay connected</p>}
+        </div>
+
+        {/* Connection */}
+        <div className="bg-white rounded-xl border p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-400 uppercase tracking-wider">Connection</p>
+            {user.is_online ? <Wifi size={16} className="text-emerald-500" /> : <WifiOff size={16} className="text-gray-300" />}
+          </div>
+          <p className={`text-lg font-bold mt-2 ${user.is_online ? 'text-emerald-600' : 'text-gray-500'}`}>
+            {user.is_online ? 'Online' : 'Offline'}
+          </p>
+          {user.ip_address && (
+            <div className="flex items-center gap-1 text-[11px] text-gray-400 mt-1">
+              <Globe size={10} /> {user.ip_address}
             </div>
           )}
         </div>
 
-        {/* Info Cards Row */}
-        <div className="grid grid-cols-2 gap-3">
-          {/* Connection Status */}
-          <div className="bg-white rounded-xl border p-4">
-            <div className="flex items-center gap-2 mb-2">
-              {user.is_online ? (
-                <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center">
-                  <Wifi size={14} className="text-emerald-600" />
-                </div>
-              ) : (
-                <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center">
-                  <WifiOff size={14} className="text-gray-400" />
-                </div>
-              )}
-              <span className={`text-xs font-semibold ${user.is_online ? 'text-emerald-700' : 'text-gray-500'}`}>
-                {user.is_online ? 'Online' : 'Offline'}
-              </span>
-            </div>
-            {user.ip_address && (
-              <div className="flex items-center gap-1.5 text-[11px] text-gray-400 mt-1">
-                <Globe size={10} /> {user.ip_address}
-              </div>
-            )}
+        {/* Plan */}
+        <div className="bg-white rounded-xl border p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-400 uppercase tracking-wider">Plan</p>
+            <CreditCard size={16} className="text-violet-400" />
           </div>
-
-          {/* Plan Info */}
-          <div className="bg-white rounded-xl border p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center">
-                <CreditCard size={14} className="text-violet-600" />
-              </div>
-              <span className="text-xs font-semibold text-gray-700">My Plan</span>
-            </div>
-            <p className="text-sm font-bold text-gray-900">{user.plan_name || 'No plan'}</p>
-            {user.download_speed && (
-              <p className="text-[11px] text-gray-400">{user.download_speed} / {user.upload_speed}</p>
-            )}
-            {user.plan_price && (
-              <p className="text-[11px] text-gray-400 mt-0.5">{fmtCurrency(user.plan_price)}/mo</p>
-            )}
-          </div>
+          <p className="text-lg font-bold text-gray-900 mt-2">{user.plan_name || 'No plan'}</p>
+          {user.download_speed && <p className="text-[11px] text-gray-400">{user.download_speed} / {user.upload_speed}</p>}
         </div>
+      </div>
 
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Redeem Voucher */}
         <div className="bg-white rounded-xl border p-4">
           <div className="flex items-center gap-2 mb-3">
-            <TicketCheck size={16} className="text-blue-600" />
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <TicketCheck size={16} className="text-blue-600" />
+            </div>
             <h3 className="text-sm font-semibold text-gray-800">Redeem Voucher</h3>
           </div>
-          <form onSubmit={handleRedeem} className="flex gap-2">
+          <form onSubmit={handleRedeem} className="space-y-2">
             <input
               type="text"
               value={voucherCode}
               onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-              placeholder="Enter voucher code (e.g. VCH-XXXX-XXXX)"
-              className="flex-1 px-3.5 py-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 font-mono tracking-wide"
+              placeholder="VCH-XXXX-XXXX"
+              className="w-full px-3.5 py-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 font-mono tracking-wider"
             />
-            <button
-              type="submit"
-              disabled={redeeming || !voucherCode.trim()}
-              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap"
-            >
-              {redeeming ? <Loader2 size={16} className="animate-spin" /> : 'Redeem'}
+            <button type="submit" disabled={redeeming || !voucherCode.trim()}
+              className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors">
+              {redeeming ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Redeem'}
             </button>
           </form>
         </div>
 
-        {/* Recent Transactions */}
-        <div className="bg-white rounded-xl border overflow-hidden">
-          <div className="px-4 py-3 border-b">
-            <h3 className="text-sm font-semibold text-gray-800">Recent Transactions</h3>
-          </div>
-          {transactions.length > 0 ? (
-            <div className="divide-y">
-              {transactions.map((tx) => (
-                <div key={tx.id} className="px-4 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      tx.type === 'credit' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'
-                    }`}>
-                      {tx.type === 'credit' ? <ArrowDownCircle size={16} /> : <ArrowUpCircle size={16} />}
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-800">{tx.description || (tx.type === 'credit' ? 'Top-up' : 'Charge')}</p>
-                      <p className="text-[10px] text-gray-400">{fmtDateTime(tx.created_at)}</p>
-                    </div>
-                  </div>
-                  <span className={`text-sm font-bold ${tx.type === 'credit' ? 'text-emerald-600' : 'text-red-500'}`}>
-                    {tx.type === 'credit' ? '+' : '-'}{fmtCurrency(tx.amount)}
-                  </span>
-                </div>
-              ))}
+        {/* Quick Links */}
+        <div className="bg-white rounded-xl border p-4 space-y-2">
+          <h3 className="text-sm font-semibold text-gray-800 mb-3">Quick Links</h3>
+          <Link to="/portal/services" className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-50 text-sm text-gray-600 group">
+            <div className="flex items-center gap-2.5">
+              <Wifi size={16} className="text-blue-500" /> View my services
             </div>
-          ) : (
-            <p className="text-sm text-gray-400 text-center py-8">No transactions yet</p>
-          )}
+            <ChevronRight size={14} className="text-gray-300 group-hover:text-gray-500" />
+          </Link>
+          <Link to="/portal/finance" className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-50 text-sm text-gray-600 group">
+            <div className="flex items-center gap-2.5">
+              <Wallet size={16} className="text-emerald-500" /> Transaction history
+            </div>
+            <ChevronRight size={14} className="text-gray-300 group-hover:text-gray-500" />
+          </Link>
+          <Link to="/portal/tickets" className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-50 text-sm text-gray-600 group">
+            <div className="flex items-center gap-2.5">
+              <Headphones size={16} className="text-orange-500" /> Contact support
+            </div>
+            <ChevronRight size={14} className="text-gray-300 group-hover:text-gray-500" />
+          </Link>
         </div>
+      </div>
 
-        {/* Account Info */}
-        <div className="bg-white rounded-xl border p-4">
-          <h3 className="text-sm font-semibold text-gray-800 mb-3">Account Details</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Username</span>
-              <span className="font-medium text-gray-800 font-mono">{user.username}</span>
-            </div>
-            {user.email && (
-              <div className="flex justify-between">
-                <span className="text-gray-500">Email</span>
-                <span className="text-gray-800">{user.email}</span>
-              </div>
-            )}
-            {user.phone && (
-              <div className="flex justify-between">
-                <span className="text-gray-500">Phone</span>
-                <span className="text-gray-800">{user.phone}</span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span className="text-gray-500">Customer ID</span>
-              <span className="text-gray-800">#{String(user.seq_id || 0).padStart(3, '0')}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Member since</span>
-              <span className="text-gray-800">{fmtDate(user.created_at)}</span>
-            </div>
-          </div>
+      {/* Recent Transactions */}
+      <div className="bg-white rounded-xl border overflow-hidden">
+        <div className="px-4 py-3 border-b flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-800">Recent Transactions</h3>
+          <Link to="/portal/finance" className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
+            View all <ChevronRight size={12} />
+          </Link>
         </div>
-      </main>
+        {loading ? (
+          <div className="flex items-center justify-center h-32"><Loader2 size={20} className="animate-spin text-blue-500" /></div>
+        ) : transactions.length > 0 ? (
+          <div className="divide-y">
+            {transactions.map((tx) => (
+              <div key={tx.id} className="px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    tx.type === 'credit' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'
+                  }`}>
+                    {tx.type === 'credit' ? <ArrowDownCircle size={16} /> : <ArrowUpCircle size={16} />}
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-800">{tx.description || (tx.type === 'credit' ? 'Top-up' : 'Charge')}</p>
+                    <p className="text-[10px] text-gray-400">{fmtDateTime(tx.created_at)}</p>
+                  </div>
+                </div>
+                <span className={`text-sm font-bold ${tx.type === 'credit' ? 'text-emerald-600' : 'text-red-500'}`}>
+                  {tx.type === 'credit' ? '+' : '-'}{fmtCurrency(tx.amount)}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400 text-center py-8">No transactions yet</p>
+        )}
+      </div>
     </div>
   );
 }

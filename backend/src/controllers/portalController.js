@@ -183,4 +183,84 @@ const redeemVoucher = async (req, res, next) => {
   }
 };
 
-module.exports = { customerLogin, getMe, getTransactions, redeemVoucher };
+// GET /portal/tickets — Customer's own tickets
+const getTickets = async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, subject, status, priority, created_at, updated_at
+       FROM tickets
+       WHERE user_id = $1 AND company_id = $2
+       ORDER BY created_at DESC`,
+      [req.userId, req.companyId]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) { next(err); }
+};
+
+// POST /portal/tickets — Create support ticket
+const createTicket = async (req, res, next) => {
+  try {
+    const { subject, description, priority } = req.body;
+    if (!subject || !description) {
+      throw new ApiError(400, 'Subject and description are required');
+    }
+    const result = await pool.query(
+      `INSERT INTO tickets (company_id, user_id, subject, description, priority, status)
+       VALUES ($1, $2, $3, $4, $5, 'open') RETURNING *`,
+      [req.companyId, req.userId, subject, description, priority || 'medium']
+    );
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (err) { next(err); }
+};
+
+// GET /portal/tickets/:id — Get ticket detail + comments
+const getTicketById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const ticketRes = await pool.query(
+      `SELECT * FROM tickets WHERE id = $1 AND user_id = $2 AND company_id = $3`,
+      [id, req.userId, req.companyId]
+    );
+    if (ticketRes.rows.length === 0) throw new ApiError(404, 'Ticket not found');
+
+    const commentsRes = await pool.query(
+      `SELECT tc.*, ca.full_name AS author_name
+       FROM ticket_comments tc
+       LEFT JOIN company_admins ca ON tc.author_id = ca.id
+       WHERE tc.ticket_id = $1
+       ORDER BY tc.created_at ASC`,
+      [id]
+    );
+
+    res.json({
+      success: true,
+      data: { ...ticketRes.rows[0], comments: commentsRes.rows },
+    });
+  } catch (err) { next(err); }
+};
+
+// POST /portal/tickets/:id/comments — Add comment to ticket (as customer)
+const addTicketComment = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+    if (!content) throw new ApiError(400, 'Content is required');
+
+    // Verify ticket belongs to customer
+    const ticket = await pool.query(
+      'SELECT id FROM tickets WHERE id = $1 AND user_id = $2 AND company_id = $3',
+      [id, req.userId, req.companyId]
+    );
+    if (ticket.rows.length === 0) throw new ApiError(404, 'Ticket not found');
+
+    const result = await pool.query(
+      `INSERT INTO ticket_comments (ticket_id, content, is_customer)
+       VALUES ($1, $2, TRUE) RETURNING *`,
+      [id, content]
+    );
+
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (err) { next(err); }
+};
+
+module.exports = { customerLogin, getMe, getTransactions, redeemVoucher, getTickets, createTicket, getTicketById, addTicketComment };
