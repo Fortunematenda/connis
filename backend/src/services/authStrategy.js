@@ -36,18 +36,28 @@ const radiusStrategy = {
   },
 
   async onUserUpdate(username, updates, routerConfig) {
-    // Update user password in RADIUS DB
-    if (updates.password) {
+    // Update user in RADIUS DB (password or username)
+    let currentUsername = username;
+    if (updates.newUsername) {
       try {
-        await radiusService.updatePassword(username, updates.password);
-        console.log(`[AUTH:RADIUS] Password updated for "${username}"`);
-        return { synced: true, method: 'radius' };
+        await radiusService.renameUser(username, updates.newUsername);
+        console.log(`[AUTH:RADIUS] Username changed: "${username}" → "${updates.newUsername}"`);
+        currentUsername = updates.newUsername;
       } catch (err) {
-        console.error(`[AUTH:RADIUS] Password update failed for "${username}": ${err.message}`);
+        console.error(`[AUTH:RADIUS] Username change failed: ${err.message}`);
         return { synced: false, method: 'radius', error: err.message };
       }
     }
-    return { synced: true, method: 'radius', message: 'No password change' };
+    if (updates.password) {
+      try {
+        await radiusService.updatePassword(currentUsername, updates.password);
+        console.log(`[AUTH:RADIUS] Password updated for "${currentUsername}"`);
+      } catch (err) {
+        console.error(`[AUTH:RADIUS] Password update failed: ${err.message}`);
+        return { synced: false, method: 'radius', error: err.message };
+      }
+    }
+    return { synced: true, method: 'radius' };
   },
 
   async onUserStatusChange(username, active, routerConfig) {
@@ -151,18 +161,22 @@ const apiStrategy = {
   },
 
   async onUserUpdate(username, updates, routerConfig) {
-    // Update PPP secret password on MikroTik
-    if (updates.password && routerConfig) {
-      try {
-        await mikrotik.updatePPPoESecret(username, { password: updates.password }, routerConfig);
-        console.log(`[AUTH:API] Password updated for "${username}"`);
+    if (!routerConfig) return { synced: false, method: 'api', error: 'No router config' };
+    // Update PPP secret (password or username) on MikroTik
+    try {
+      if (updates.newUsername || updates.password) {
+        const updateData = {};
+        if (updates.newUsername) updateData.name = updates.newUsername;
+        if (updates.password) updateData.password = updates.password;
+        await mikrotik.updatePPPoESecret(username, updateData, routerConfig);
+        console.log(`[AUTH:API] PPP secret updated for "${username}"`);
         return { synced: true, method: 'api' };
-      } catch (err) {
-        console.warn(`[AUTH:API] Password update failed for "${username}": ${err.message}`);
-        return { synced: false, method: 'api', error: err.message };
       }
+      return { synced: true, method: 'api', message: 'No changes' };
+    } catch (err) {
+      console.warn(`[AUTH:API] Update failed for "${username}": ${err.message}`);
+      return { synced: false, method: 'api', error: err.message };
     }
-    return { synced: true, method: 'api', message: 'No password change or no router config' };
   },
 
   async onUserStatusChange(username, active, routerConfig) {

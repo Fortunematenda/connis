@@ -104,6 +104,28 @@ const updatePassword = async (username, newPassword) => {
 };
 
 /**
+ * Rename a RADIUS user (change username)
+ */
+const renameUser = async (oldUsername, newUsername) => {
+  const client = await radiusDb.connect();
+  try {
+    await client.query('BEGIN');
+    // Update username in all tables
+    await client.query(`UPDATE radcheck SET username = $1 WHERE username = $2`, [newUsername, oldUsername]);
+    await client.query(`UPDATE radreply SET username = $1 WHERE username = $2`, [newUsername, oldUsername]);
+    await client.query(`UPDATE radusergroup SET username = $1 WHERE username = $2`, [newUsername, oldUsername]);
+    await client.query('COMMIT');
+    console.log(`[RADIUS] Username changed: ${oldUsername} → ${newUsername}`);
+    return true;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+/**
  * Update a RADIUS user's rate limit (Mikrotik-Rate-Limit)
  */
 const updateRateLimit = async (username, rateLimit) => {
@@ -244,6 +266,7 @@ module.exports = {
   createUser,
   deleteUser,
   updatePassword,
+  renameUser,
   updateRateLimit,
   changeGroup,
   disableUser,

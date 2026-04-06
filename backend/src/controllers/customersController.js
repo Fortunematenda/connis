@@ -155,8 +155,17 @@ const updateCustomer = async (req, res, next) => {
 
     const updated = result.rows[0];
 
-    // Sync password change to auth strategy (RADIUS or API)
-    if (password) {
+    // Sync username and/or password change to auth strategy (RADIUS or API)
+    if (username && username !== oldUsername) {
+      try {
+        const routerConfig = await getRouterConfigForCompany(req.companyId);
+        const strategy = getStrategy(routerConfig?.authType || 'radius');
+        await strategy.onUserUpdate(oldUsername, { newUsername: username, password }, routerConfig);
+      } catch (mkErr) {
+        console.warn(`[CUSTOMER] Username sync failed for ${oldUsername}: ${mkErr.message}`);
+      }
+    } else if (password) {
+      // Only password changed, username stayed the same
       try {
         const routerConfig = await getRouterConfigForCompany(req.companyId);
         const strategy = getStrategy(routerConfig?.authType || 'radius');
