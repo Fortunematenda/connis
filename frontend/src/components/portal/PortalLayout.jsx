@@ -168,6 +168,27 @@ export default function PortalLayout() {
 
       {/* Main Content */}
       <main className="flex-1 md:ml-60 pt-14 md:pt-0 min-h-screen">
+        {/* Desktop Top Nav */}
+        <div className="hidden md:flex items-center justify-between px-6 py-3 bg-white border-b sticky top-0 z-20">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
+              {(user?.full_name || user?.username || 'U')[0].toUpperCase()}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-800">{user?.full_name || user?.username}</p>
+              <p className="text-[10px] text-gray-400">{user?.email || user?.username}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className={`px-3 py-1.5 rounded-lg text-sm font-bold ${balance > 0 ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-600'}`}>
+              R{balance.toFixed(2)}
+            </div>
+            <button onClick={handleLogout}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors">
+              <LogOut size={14} /> Sign Out
+            </button>
+          </div>
+        </div>
         <div className="max-w-4xl mx-auto px-4 md:px-6 py-6">
           <Outlet context={{ user, refreshUser: () => portalApi.getMe().then(r => { setUser(r.data); localStorage.setItem('connis_portal_user', JSON.stringify(r.data)); }) }} />
         </div>

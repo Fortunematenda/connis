@@ -51,14 +51,16 @@ function TaskCardAdmin({ task, onReply, onResend }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Update the task via API
-      await tasksApi.update(task.id, {
-        title: editForm.title,
-        description: editForm.description,
-        date: editForm.date,
-        priority: editForm.priority,
-        technician: editForm.technician,
-      });
+      // Update the task via API only if we have a valid task ID
+      if (task.id) {
+        await tasksApi.update(task.id, {
+          title: editForm.title,
+          description: editForm.description,
+          date: editForm.date,
+          priority: editForm.priority,
+          technician: editForm.technician,
+        });
+      }
       setEditing(false);
       // Resend updated task card
       if (onResend) onResend(editForm);
@@ -309,6 +311,7 @@ export default function MessagesPage() {
         priority: taskForm.priority,
         technician: techName || '',
       });
+      // Note: task ID not included since tasksApi.create doesn't return it in the card flow
       const msgRes = await messagesApi.send(userId, taskCard);
       setMessages([...messages, msgRes.data]);
       setTaskModal(false);
@@ -502,7 +505,8 @@ export default function MessagesPage() {
               <form onSubmit={handleSend} className="flex gap-2">
                 <textarea value={text} onChange={(e) => setText(e.target.value)}
                   placeholder={replyTo ? `Reply to ${replyTo.title}...` : "Type a message..."}
-                  className="flex-1 px-4 py-2.5 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none h-10 max-h-32" />
+                  rows={1}
+                  className="flex-1 px-4 py-2.5 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none h-10 max-h-32 overflow-hidden" style={{ appearance: 'none' }} />
                 <button type="submit" disabled={sending || !text.trim()}
                   className="px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors">
                   {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}

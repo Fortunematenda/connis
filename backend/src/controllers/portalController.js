@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const radiusDb = require('../config/radiusDb');
 const { ApiError } = require('../middleware/errorHandler');
 const { generateCustomerToken } = require('../middleware/customerAuth');
 const { getRouterConfigForCompany } = require('../services/routerResolver');
@@ -286,58 +287,65 @@ const addTicketComment = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// GET /portal/statistics — customer usage stats (sessions, bandwidth)
+// GET /portal/statistics — customer usage stats from RADIUS accounting
 const getStatistics = async (req, res, next) => {
   try {
     const userId = req.userId;
-    const companyId = req.companyId;
 
-    // Total bandwidth all time (company_id may be NULL on older sessions)
-    const totalRes = await pool.query(
-      `SELECT COALESCE(SUM(upload_bytes), 0) AS total_upload,
-              COALESCE(SUM(download_bytes), 0) AS total_download,
+    // Get the customer's PPPoE username
+    const userRes = await pool.query('SELECT username FROM users WHERE id = $1', [userId]);
+    if (userRes.rows.length === 0) throw new ApiError(404, 'User not found');
+    const username = userRes.rows[0].username;
+
+    // Total bandwidth all time from radacct
+    const totalRes = await radiusDb.query(
+      `SELECT COALESCE(SUM(acctinputoctets), 0) AS total_upload,
+              COALESCE(SUM(acctoutputoctets), 0) AS total_download,
               COUNT(*) AS total_sessions
-       FROM sessions WHERE user_id = $1 AND (company_id = $2 OR company_id IS NULL)`,
-      [userId, companyId]
+       FROM radacct WHERE username = $1`,
+      [username]
     );
 
     // This month bandwidth
-    const monthRes = await pool.query(
-      `SELECT COALESCE(SUM(upload_bytes), 0) AS month_upload,
-              COALESCE(SUM(download_bytes), 0) AS month_download,
+    const monthRes = await radiusDb.query(
+      `SELECT COALESCE(SUM(acctinputoctets), 0) AS month_upload,
+              COALESCE(SUM(acctoutputoctets), 0) AS month_download,
               COUNT(*) AS month_sessions
-       FROM sessions WHERE user_id = $1 AND (company_id = $2 OR company_id IS NULL)
-         AND start_time >= date_trunc('month', NOW())`,
-      [userId, companyId]
+       FROM radacct WHERE username = $1
+         AND acctstarttime >= date_trunc('month', NOW())`,
+      [username]
     );
 
     // Today bandwidth
-    const todayRes = await pool.query(
-      `SELECT COALESCE(SUM(upload_bytes), 0) AS today_upload,
-              COALESCE(SUM(download_bytes), 0) AS today_download,
+    const todayRes = await radiusDb.query(
+      `SELECT COALESCE(SUM(acctinputoctets), 0) AS today_upload,
+              COALESCE(SUM(acctoutputoctets), 0) AS today_download,
               COUNT(*) AS today_sessions
-       FROM sessions WHERE user_id = $1 AND (company_id = $2 OR company_id IS NULL)
-         AND start_time >= date_trunc('day', NOW())`,
-      [userId, companyId]
+       FROM radacct WHERE username = $1
+         AND acctstarttime >= date_trunc('day', NOW())`,
+      [username]
     );
 
     // Recent sessions (last 20)
-    const sessionsRes = await pool.query(
-      `SELECT id, framed_ip, start_time, stop_time, upload_bytes, download_bytes, terminate_cause
-       FROM sessions WHERE user_id = $1 AND (company_id = $2 OR company_id IS NULL)
-       ORDER BY start_time DESC LIMIT 20`,
-      [userId, companyId]
+    const sessionsRes = await radiusDb.query(
+      `SELECT acctsessionid AS id, framedipaddress AS framed_ip,
+              acctstarttime AS start_time, acctstoptime AS stop_time,
+              acctinputoctets AS upload_bytes, acctoutputoctets AS download_bytes,
+              acctterminatecause AS terminate_cause
+       FROM radacct WHERE username = $1
+       ORDER BY acctstarttime DESC LIMIT 20`,
+      [username]
     );
 
     // Daily usage for last 30 days
-    const dailyRes = await pool.query(
-      `SELECT date_trunc('day', start_time)::date AS day,
-              COALESCE(SUM(download_bytes), 0) AS download,
-              COALESCE(SUM(upload_bytes), 0) AS upload
-       FROM sessions WHERE user_id = $1 AND (company_id = $2 OR company_id IS NULL)
-         AND start_time >= NOW() - INTERVAL '30 days'
+    const dailyRes = await radiusDb.query(
+      `SELECT date_trunc('day', acctstarttime)::date AS day,
+              COALESCE(SUM(acctoutputoctets), 0) AS download,
+              COALESCE(SUM(acctinputoctets), 0) AS upload
+       FROM radacct WHERE username = $1
+         AND acctstarttime >= NOW() - INTERVAL '30 days'
        GROUP BY day ORDER BY day ASC`,
-      [userId, companyId]
+      [username]
     );
 
     res.json({
