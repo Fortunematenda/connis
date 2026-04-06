@@ -150,12 +150,20 @@ export default function CustomersPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginated.map((c, idx) => (
-                  <tr
-                    key={c.id}
-                    onClick={() => navigate(`/customers/${c.id}`)}
-                    className="border-b last:border-0 hover:bg-blue-50/30 cursor-pointer transition-colors group"
-                  >
+                {paginated.map((c, idx) => {
+                  const isOnline = onlineMap[c.username];
+                  const isBlocked = !c.active;
+                  const rowClass = isBlocked
+                    ? 'bg-red-50/60 hover:bg-red-50'
+                    : isOnline
+                      ? 'bg-emerald-50/40 hover:bg-emerald-50/60'
+                      : 'hover:bg-gray-50/50';
+                  return (
+                    <tr
+                      key={c.id}
+                      onClick={() => navigate(`/customers/${c.id}`)}
+                      className={`border-b last:border-0 cursor-pointer transition-colors group ${rowClass}`}
+                    >
                     <td className="pl-4 pr-2 py-3 text-xs font-mono text-gray-400">
                       {String(c.seq_id || 0).padStart(3, '0')}
                     </td>
@@ -204,7 +212,8 @@ export default function CustomersPage() {
                       {fmtDate(c.created_at)}
                     </td>
                   </tr>
-                ))}
+                );
+                })}
               </tbody>
             </table>
           </div>

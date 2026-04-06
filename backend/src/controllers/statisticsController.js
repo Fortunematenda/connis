@@ -2,6 +2,7 @@ const pool = require('../config/db');
 const radiusDb = require('../config/radiusDb');
 const { ApiError } = require('../middleware/errorHandler');
 const { getInterfaceTraffic } = require('../services/mikrotik');
+const { getRouterConfigForCompany } = require('../services/routerResolver');
 
 // GET /customers/:id/statistics — Fetch RADIUS accounting data for a customer
 const getCustomerStatistics = async (req, res, next) => {
@@ -177,7 +178,8 @@ const getLiveBandwidth = async (req, res, next) => {
     }
     const username = userRes.rows[0].username;
 
-    const traffic = await getInterfaceTraffic(username);
+    const routerConfig = await getRouterConfigForCompany(req.companyId);
+    const traffic = await getInterfaceTraffic(username, routerConfig);
     if (!traffic) {
       return res.json({ success: true, data: null }); // user offline
     }
