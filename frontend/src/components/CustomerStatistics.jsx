@@ -196,8 +196,8 @@ export default function CustomerStatistics({ customerId }) {
               ].map(row => (
                 <tr key={row.label} className="border-b last:border-0 hover:bg-gray-50/50">
                   <td className="px-5 py-3 font-medium text-gray-700">{row.label}</td>
-                  <td className="px-5 py-3 text-gray-600">{fmtMB(row.data?.download || 0)} / 0.00</td>
                   <td className="px-5 py-3 text-gray-600">{fmtMB(row.data?.upload || 0)} / 0.00</td>
+                  <td className="px-5 py-3 text-gray-600">{fmtMB(row.data?.download || 0)} / 0.00</td>
                   <td className="px-5 py-3 text-gray-600">{fmtOnlineTime(row.data?.online_time || 0)}</td>
                 </tr>
               ))}
@@ -272,6 +272,7 @@ export default function CustomerStatistics({ customerId }) {
             <span>Total Online: <strong className="text-gray-800">{fmtDuration(stats.all_time.session_time)}</strong></span>
             <span>Sessions: <strong className="text-gray-800">{stats.all_time.sessions}</strong></span>
             {stats.all_time.first_session && <span>First: <strong className="text-gray-800">{fmtDate(stats.all_time.first_session)}</strong></span>}
+            {stats.all_time.last_session && <span>Last: <strong className="text-gray-800">{fmtDate(stats.all_time.last_session)}</strong></span>}
           </div>
         </div>
       )}
