@@ -326,7 +326,7 @@ export default function MessagesPage() {
   );
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] -mx-6 -mt-2">
+    <div className="flex h-[calc(100vh-7rem)] -mx-4 md:-mx-6 -mt-2">
       {/* Sidebar: Conversations list */}
       <div className={`w-80 border-r bg-white flex flex-col shrink-0 ${userId ? 'hidden md:flex' : 'flex'} ${!userId ? 'flex-1 md:flex-none' : ''}`}>
         <div className="px-4 py-3 border-b">
