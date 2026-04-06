@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   MessageSquare, Send, Loader2, Search, ArrowLeft, User, Clock, Paperclip,
   Phone, Mail, CalendarPlus, ExternalLink, X, Wrench, AlertTriangle, Reply,
+  Check, Pencil,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { messagesApi, tasksApi, staffApi } from '../services/api';
@@ -41,27 +42,136 @@ function parseTaskCard(content) {
   return null;
 }
 
-function TaskCardAdmin({ task, onReply }) {
-  const dateStr = task.date ? new Date(task.date).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : 'TBD';
+function TaskCardAdmin({ task, onReply, onResend }) {
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ ...task });
+  const [saving, setSaving] = useState(false);
+  const dateStr = editForm.date ? new Date(editForm.date).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : 'TBD';
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      // Update the task via API
+      await tasksApi.update(task.id, {
+        title: editForm.title,
+        description: editForm.description,
+        date: editForm.date,
+        priority: editForm.priority,
+        technician: editForm.technician,
+      });
+      setEditing(false);
+      // Resend updated task card
+      if (onResend) onResend(editForm);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditForm({ ...task });
+    setEditing(false);
+  };
+
   return (
-    <div className="w-full max-w-[280px] bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl overflow-hidden shadow-sm">
-      <div className="bg-orange-500 px-3 py-2 flex items-center gap-2">
-        <Wrench size={13} className="text-white" />
-        <span className="text-white text-[10px] font-bold uppercase tracking-wider">Scheduled Task</span>
-      </div>
-      <div className="p-3 space-y-2">
-        <p className="text-sm font-bold text-gray-900">{task.title}</p>
-        {task.description && <p className="text-xs text-gray-600">{task.description}</p>}
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs text-gray-700"><Clock size={11} className="text-orange-500" /> {dateStr}</div>
-          {task.technician && <div className="flex items-center gap-2 text-xs text-gray-700"><Wrench size={11} className="text-orange-500" /> {task.technician}</div>}
-          <div className="flex items-center gap-2 text-xs"><AlertTriangle size={11} className="text-orange-500" /><span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${priorityColors[task.priority] || priorityColors.medium}`}>{task.priority?.toUpperCase()}</span></div>
+    <div className="w-full max-w-[320px] bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-orange-500 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Wrench size={14} className="text-white" />
+          <span className="text-white text-xs font-bold uppercase tracking-wider">Scheduled Task</span>
         </div>
-        <div className="pt-2 border-t border-orange-200/60">
-          <button onClick={() => onReply && onReply(task)} className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium text-orange-700 bg-white border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors">
-            <Reply size={12} /> Reply to Task
+        {!editing && (
+          <button onClick={() => setEditing(true)} className="p-1 text-white/80 hover:text-white">
+            <Pencil size={12} />
           </button>
-        </div>
+        )}
+      </div>
+      <div className="p-4 space-y-3">
+        {editing ? (
+          <div className="space-y-3">
+            <div>
+              <label className="text-[10px] font-medium text-gray-500 mb-1 block">Task Title</label>
+              <input
+                type="text"
+                value={editForm.title}
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                className="w-full px-2 py-1.5 border rounded text-sm outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-medium text-gray-500 mb-1 block">Description</label>
+              <textarea
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                rows={2}
+                className="w-full px-2 py-1.5 border rounded text-sm outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 resize-none"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-medium text-gray-500 mb-1 block">Date</label>
+                <input
+                  type="date"
+                  value={editForm.date}
+                  onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                  className="w-full px-2 py-1.5 border rounded text-sm outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-medium text-gray-500 mb-1 block">Priority</label>
+                <select
+                  value={editForm.priority}
+                  onChange={(e) => setEditForm({ ...editForm, priority: e.target.value })}
+                  className="w-full px-2 py-1.5 border rounded text-sm outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 bg-white"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <button onClick={handleSave} disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-orange-600 rounded-lg hover:bg-orange-700 disabled:opacity-50 transition-colors">
+                {saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                {saving ? 'Saving...' : 'Save & Resend'}
+              </button>
+              <button onClick={handleCancel} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                <X size={12} /> Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <p className="text-base font-bold text-gray-900">{task.title}</p>
+            {task.description && <p className="text-sm text-gray-600 leading-relaxed">{task.description}</p>}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-gray-700">
+                <Clock size={12} className="text-orange-500" /> {dateStr}
+              </div>
+              {task.technician && (
+                <div className="flex items-center gap-2 text-sm text-gray-700">
+                  <Wrench size={12} className="text-orange-500" /> {task.technician}
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-sm">
+                <AlertTriangle size={12} className="text-orange-500" />
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${priorityColors[task.priority] || priorityColors.medium}`}>
+                  {task.priority?.toUpperCase()}
+                </span>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-orange-200/60 flex gap-2">
+              <button onClick={() => onReply && onReply(task)} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-orange-700 bg-white border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors">
+                <Reply size={13} /> Reply
+              </button>
+              <button onClick={() => setEditing(true)} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-orange-700 bg-white border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors">
+                <Pencil size={13} /> Edit
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -153,6 +263,23 @@ export default function MessagesPage() {
     setReplyTo(task);
     setText(`Re: ${task.title}\n\n`);
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleResendTask = async (updatedTask) => {
+    try {
+      const techName = staff.find(s => s.id === updatedTask.assigned_to)?.full_name || updatedTask.technician;
+      const taskCard = JSON.stringify({
+        _type: 'task_card',
+        title: updatedTask.title,
+        description: updatedTask.description || '',
+        date: updatedTask.date || '',
+        priority: updatedTask.priority,
+        technician: techName || '',
+      });
+      const msgRes = await messagesApi.send(userId, taskCard);
+      setMessages([...messages, msgRes.data]);
+      toast.success('Task updated & client notified');
+    } catch (err) { toast.error(err.message); }
   };
 
   const selectConversation = (uid) => {
@@ -324,7 +451,7 @@ export default function MessagesPage() {
                             <p className="text-[10px] text-gray-400 mb-0.5 mr-1 text-right">{m.admin_name}</p>
                           )}
                           {taskData ? (
-                            <TaskCardAdmin task={taskData} onReply={handleReplyTask} />
+                            <TaskCardAdmin task={taskData} onReply={handleReplyTask} onResend={handleResendTask} />
                           ) : (
                           <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
                             isAdmin

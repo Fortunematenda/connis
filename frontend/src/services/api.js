@@ -55,6 +55,14 @@ export const authApi = {
     const res = await authFetch(`${API_BASE}/auth/me`);
     return handleResponse(res);
   },
+
+  updateCompany: async (data) => {
+    const res = await authFetch(`${API_BASE}/auth/company`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
 };
 
 // ── Leads API ──────────────────────────────────────────────

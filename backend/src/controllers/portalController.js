@@ -353,4 +353,17 @@ const getStatistics = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { customerLogin, getMe, getTransactions, redeemVoucher, getTickets, createTicket, getTicketById, addTicketComment, getStatistics };
+// GET /portal/company — Get company info for payment details
+const getCompany = async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT name, email, phone, address, bank_details
+       FROM companies WHERE id = $1`,
+      [req.companyId]
+    );
+    if (result.rows.length === 0) throw new ApiError(404, 'Company not found');
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) { next(err); }
+};
+
+module.exports = { customerLogin, getMe, getTransactions, redeemVoucher, getTickets, createTicket, getTicketById, addTicketComment, getStatistics, getCompany };

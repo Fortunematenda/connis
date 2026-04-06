@@ -2,7 +2,7 @@ const express = require('express');
 const { body } = require('express-validator');
 const validate = require('../middleware/validate');
 const { authenticate } = require('../middleware/auth');
-const { register, login, getMe } = require('../controllers/authController');
+const { register, login, getMe, updateCompanySettings } = require('../controllers/authController');
 
 const router = express.Router();
 
@@ -34,5 +34,20 @@ router.post(
 
 // GET /auth/me — Get current user + company info (requires auth)
 router.get('/me', authenticate, getMe);
+
+// PUT /auth/company — Update company settings (bank details, etc.)
+router.put(
+  '/company',
+  authenticate,
+  [
+    body('name').optional().trim().notEmpty().withMessage('Company name cannot be empty'),
+    body('email').optional().isEmail().withMessage('Valid email is required'),
+    body('phone').optional().trim(),
+    body('address').optional().trim(),
+    body('bank_details').optional().trim(),
+  ],
+  validate,
+  updateCompanySettings
+);
 
 module.exports = router;

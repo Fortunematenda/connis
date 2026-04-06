@@ -109,7 +109,7 @@ const getMe = async (req, res, next) => {
     const result = await pool.query(
       `SELECT ca.id, ca.email, ca.full_name, ca.role,
               c.id AS company_id, c.name AS company_name, c.email AS company_email,
-              c.phone AS company_phone, c.address AS company_address,
+              c.phone AS company_phone, c.address AS company_address, c.bank_details,
               c.subscription_status, c.subscription_plan, c.expires_at
        FROM company_admins ca
        JOIN companies c ON ca.company_id = c.id
@@ -123,4 +123,18 @@ const getMe = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, getMe };
+// PUT /auth/company — Update company settings (bank details, etc.)
+const updateCompanySettings = async (req, res, next) => {
+  try {
+    const { name, email, phone, address, bank_details } = req.body;
+    const result = await pool.query(
+      `UPDATE companies SET name = $1, email = $2, phone = $3, address = $4, bank_details = $5, updated_at = NOW()
+       WHERE id = $6 RETURNING *`,
+      [name, email, phone, address, bank_details || null, req.admin.company_id]
+    );
+    if (result.rows.length === 0) throw new ApiError(404, 'Company not found');
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) { next(err); }
+};
+
+module.exports = { register, login, getMe, updateCompanySettings };

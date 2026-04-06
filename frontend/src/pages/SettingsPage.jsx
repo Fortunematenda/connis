@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Settings, Router, Wifi, WifiOff, Plus, Trash2, TestTube, Building2, Pencil, X, Check, Loader2, FileText, Activity, AlertTriangle, UserCheck, XCircle, Terminal, Filter, Download, RefreshCw, ChevronRight, User } from 'lucide-react';
+import { Settings, Router, Wifi, WifiOff, Plus, Trash2, TestTube, Building2, Pencil, X, Check, Loader2, FileText, Activity, AlertTriangle, UserCheck, XCircle, Terminal, Filter, Download, RefreshCw, ChevronRight, User, CreditCard, Building } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { routersApi } from '../services/api';
+import { routersApi, authApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const LOGS_API_URL = '/api/logs';
@@ -33,6 +33,9 @@ const SettingsPage = () => {
   const [form, setForm] = useState({ name: '', ip_address: '', username: 'admin', password: '', port: '8728', auth_type: 'radius', is_default: true });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [editingCompany, setEditingCompany] = useState(false);
+  const [companyForm, setCompanyForm] = useState({ name: '', email: '', phone: '', address: '', bank_details: '' });
+  const [companySaving, setCompanySaving] = useState(false);
 
   // System Logs state
   const [logs, setLogs] = useState(MOCK_LOGS);
@@ -208,6 +211,37 @@ const SettingsPage = () => {
     toast.success('Logs exported to CSV');
   };
 
+  const startEditCompany = () => {
+    setEditingCompany(true);
+    setCompanyForm({
+      name: company?.name || '',
+      email: company?.company_email || '',
+      phone: company?.company_phone || '',
+      address: company?.company_address || '',
+      bank_details: company?.bank_details || '',
+    });
+  };
+
+  const cancelEditCompany = () => {
+    setEditingCompany(false);
+    setCompanyForm({ name: '', email: '', phone: '', address: '', bank_details: '' });
+  };
+
+  const saveCompany = async () => {
+    setCompanySaving(true);
+    try {
+      await authApi.updateCompany(companyForm);
+      toast.success('Company details updated');
+      setEditingCompany(false);
+      // Refresh company data
+      window.location.reload();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setCompanySaving(false);
+    }
+  };
+
   const inputCls = 'w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm';
 
   return (
@@ -219,34 +253,151 @@ const SettingsPage = () => {
 
       {/* Company Profile */}
       <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-4">
-          <Building2 size={20} />
-          Company Profile
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <span className="text-sm text-gray-500">Company Name</span>
-            <p className="font-medium">{company?.name}</p>
-          </div>
-          <div>
-            <span className="text-sm text-gray-500">Subscription</span>
-            <p className="font-medium">
-              <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
-                company?.subscription_status === 'active' || company?.subscription_status === 'trial'
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-red-100 text-red-700'
-              }`}>
-                {company?.subscription_status?.toUpperCase()}
-              </span>
-              {' '}
-              <span className="text-gray-500">({company?.subscription_plan})</span>
-            </p>
-          </div>
-          <div>
-            <span className="text-sm text-gray-500">Expires</span>
-            <p className="font-medium">{company?.expires_at ? new Date(company.expires_at).toLocaleDateString() : 'N/A'}</p>
-          </div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <Building2 size={20} />
+            Company Profile
+          </h2>
+          {!editingCompany && (
+            <button
+              onClick={startEditCompany}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <Pencil size={14} />
+              Edit
+            </button>
+          )}
         </div>
+
+        {editingCompany ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                <input
+                  type="text"
+                  value={companyForm.name}
+                  onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })}
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={companyForm.email}
+                  onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })}
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="text"
+                  value={companyForm.phone}
+                  onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <input
+                  type="text"
+                  value={companyForm.address}
+                  onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })}
+                  className={inputCls}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                <CreditCard size={16} />
+                Bank Details (for customer payments)
+              </label>
+              <textarea
+                value={companyForm.bank_details}
+                onChange={(e) => setCompanyForm({ ...companyForm, bank_details: e.target.value })}
+                placeholder="Bank Name:&#10;Account Name:&#10;Account Number:&#10;Branch Code:&#10;Reference: Customer Name/Account"
+                rows={6}
+                className={inputCls}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Enter your bank details that customers will use to make payments. This will be displayed in the customer portal.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                onClick={saveCompany}
+                disabled={companySaving}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {companySaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                Save Changes
+              </button>
+              <button
+                onClick={cancelEditCompany}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <X size={16} />
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <span className="text-sm text-gray-500">Company Name</span>
+                <p className="font-medium">{company?.name}</p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-500">Email</span>
+                <p className="font-medium">{company?.company_email || '—'}</p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-500">Phone</span>
+                <p className="font-medium">{company?.company_phone || '—'}</p>
+              </div>
+              <div className="md:col-span-3">
+                <span className="text-sm text-gray-500">Address</span>
+                <p className="font-medium">{company?.company_address || '—'}</p>
+              </div>
+            </div>
+            <div>
+              <span className="text-sm text-gray-500 flex items-center gap-2 mb-2">
+                <CreditCard size={14} />
+                Bank Details
+              </span>
+              {company?.bank_details ? (
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <pre className="text-sm text-gray-700 whitespace-pre-wrap">{company.bank_details}</pre>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400 italic">No bank details set. Customers won't see payment options.</p>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+              <div>
+                <span className="text-sm text-gray-500">Subscription</span>
+                <p className="font-medium">
+                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
+                    company?.subscription_status === 'active' || company?.subscription_status === 'trial'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-red-100 text-red-700'
+                  }`}>
+                    {company?.subscription_status?.toUpperCase()}
+                  </span>
+                  {' '}
+                  <span className="text-gray-500">({company?.subscription_plan})</span>
+                </p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-500">Expires</span>
+                <p className="font-medium">{company?.expires_at ? new Date(company.expires_at).toLocaleDateString() : 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Router Configuration */}

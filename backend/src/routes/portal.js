@@ -43,6 +43,7 @@ router.post('/tickets/:id/comments', authenticateCustomer, addTicketComment);
 router.get('/messages', authenticateCustomer, getCustomerMessages);
 router.post('/messages', authenticateCustomer, sendCustomerMessage);
 router.get('/messages/unread-count', authenticateCustomer, getCustomerUnreadCount);
+router.get('/company', authenticateCustomer, getCompany);
 router.post('/upload', authenticateCustomer, upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
   const url = `/api/uploads/chat/${req.file.filename}`;

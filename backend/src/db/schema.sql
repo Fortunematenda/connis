@@ -63,6 +63,7 @@ CREATE INDEX IF NOT EXISTS idx_routers_company ON routers(company_id);
 -- MIGRATION: Add columns to existing tables BEFORE indexes
 -- (must run before CREATE INDEX on these columns)
 -- ============================================================
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS bank_details TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE;
 ALTER TABLE plans ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE;
 ALTER TABLE plans ADD COLUMN IF NOT EXISTS mikrotik_profile VARCHAR(100);
