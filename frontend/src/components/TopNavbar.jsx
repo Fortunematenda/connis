@@ -98,50 +98,54 @@ export default function TopNavbar({ onMenuToggle }) {
           </button>
 
           {notifOpen && (
-            <div className="absolute right-0 top-full mt-1 w-80 bg-white rounded-xl border shadow-xl z-50 overflow-hidden">
-              <div className="px-4 py-3 border-b flex items-center justify-between">
-                <p className="text-sm font-semibold text-gray-800">Notifications</p>
-                {unreadCount > 0 && (
-                  <button onClick={handleMarkAllRead} className="text-[11px] text-blue-600 hover:text-blue-700 flex items-center gap-1">
-                    <CheckCheck size={12} /> Mark all read
-                  </button>
-                )}
-              </div>
-              <div className="max-h-80 overflow-y-auto">
-                {notifications.length > 0 ? (
-                  <div className="divide-y">
-                    {notifications.map((n) => {
-                      const Icon = typeIcons[n.type] || Bell;
-                      return (
-                        <button key={n.id} onClick={() => handleNotifClick(n)}
-                          className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${!n.is_read ? 'bg-blue-50/40' : ''}`}>
-                          <div className="flex gap-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                              n.type === 'new_ticket' ? 'bg-orange-50 text-orange-500' :
-                              n.type === 'new_message' ? 'bg-blue-50 text-blue-500' :
-                              'bg-gray-100 text-gray-400'
-                            }`}>
-                              <Icon size={14} />
+            <>
+              {/* Mobile overlay */}
+              <div className="fixed inset-0 bg-black/20 z-40 md:hidden" onClick={() => setNotifOpen(false)} />
+              <div className="fixed inset-x-0 top-14 mx-2 md:mx-0 md:absolute md:right-0 md:left-auto md:top-full md:mt-1 md:w-80 bg-white rounded-xl border shadow-xl z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b flex items-center justify-between">
+                  <p className="text-sm font-semibold text-gray-800">Notifications</p>
+                  {unreadCount > 0 && (
+                    <button onClick={handleMarkAllRead} className="text-[11px] text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                      <CheckCheck size={12} /> Mark all read
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-[60vh] md:max-h-80 overflow-y-auto">
+                  {notifications.length > 0 ? (
+                    <div className="divide-y">
+                      {notifications.map((n) => {
+                        const Icon = typeIcons[n.type] || Bell;
+                        return (
+                          <button key={n.id} onClick={() => handleNotifClick(n)}
+                            className={`w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors ${!n.is_read ? 'bg-blue-50/40' : ''}`}>
+                            <div className="flex gap-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                                n.type === 'new_ticket' ? 'bg-orange-50 text-orange-500' :
+                                n.type === 'new_message' ? 'bg-blue-50 text-blue-500' :
+                                'bg-gray-100 text-gray-400'
+                              }`}>
+                                <Icon size={14} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm ${!n.is_read ? 'font-semibold text-gray-900' : 'text-gray-700'} truncate`}>{n.title}</p>
+                                {n.body && <p className="text-xs text-gray-400 truncate mt-0.5">{n.body}</p>}
+                                <p className="text-[10px] text-gray-400 mt-1">{fmtRelative(n.created_at)}</p>
+                              </div>
+                              {!n.is_read && <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 shrink-0" />}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-sm ${!n.is_read ? 'font-semibold text-gray-900' : 'text-gray-700'} truncate`}>{n.title}</p>
-                              {n.body && <p className="text-xs text-gray-400 truncate mt-0.5">{n.body}</p>}
-                              <p className="text-[10px] text-gray-400 mt-1">{fmtRelative(n.created_at)}</p>
-                            </div>
-                            {!n.is_read && <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 shrink-0" />}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="px-4 py-8 text-center">
-                    <Bell size={24} className="text-gray-200 mx-auto mb-2" />
-                    <p className="text-xs text-gray-400">No notifications</p>
-                  </div>
-                )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="px-4 py-8 text-center">
+                      <Bell size={24} className="text-gray-200 mx-auto mb-2" />
+                      <p className="text-xs text-gray-400">No notifications</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            </>
           )}
         </div>
 

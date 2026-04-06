@@ -484,7 +484,8 @@ export default function TicketsPage() {
                 </div>
               ) : (
                 <>
-                  <div className="overflow-x-auto">
+                  {/* Desktop table */}
+                  <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="text-left text-[11px] text-gray-500 uppercase tracking-wider border-b bg-gray-50/50">
@@ -551,6 +552,30 @@ export default function TicketsPage() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                  {/* Mobile cards */}
+                  <div className="md:hidden divide-y">
+                    {paginated.map((t) => (
+                      <button key={t.id} onClick={() => loadDetail(t.id)}
+                        className="w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-900 truncate">{t.subject}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{t.customer_name || 'No customer'} · {fmtRelative(t.created_at)}</p>
+                          </div>
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${PRIORITY_META[t.priority]?.color || ''}`}>
+                            {PRIORITY_META[t.priority]?.label || t.priority}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded ${STATUS_META[t.status]?.color || 'bg-gray-100'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_META[t.status]?.dot || 'bg-gray-400'}`} />
+                            {STATUS_META[t.status]?.label || t.status}
+                          </span>
+                          {t.assigned_name && <span className="text-[10px] text-gray-400">→ {t.assigned_name}</span>}
+                        </div>
+                      </button>
+                    ))}
                   </div>
 
                   {/* Pagination */}

@@ -496,7 +496,7 @@ export default function TasksPage() {
                 <div className="relative">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input type="text" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                    placeholder="Search..." className="pl-9 pr-4 py-2 border rounded-lg text-sm w-56 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
+                    placeholder="Search..." className="pl-9 pr-4 py-2 border rounded-lg text-sm w-full sm:w-56 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
                 </div>
               </div>
 
@@ -507,7 +507,8 @@ export default function TasksPage() {
                 </div>
               ) : (
                 <>
-                  <div className="overflow-x-auto">
+                  {/* Desktop table */}
+                  <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="text-left text-[11px] text-gray-500 uppercase tracking-wider border-b bg-gray-50/50">
@@ -575,6 +576,36 @@ export default function TasksPage() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                  {/* Mobile cards */}
+                  <div className="md:hidden divide-y">
+                    {paginated.map((t) => (
+                      <button key={t.id} onClick={() => loadDetail(t.id)}
+                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors ${isOverdue(t.due_date, t.status) ? 'bg-red-50/30' : ''}`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-900 truncate">{t.title}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {t.assigned_name || 'Unassigned'}{t.customer_name ? ` · ${t.customer_name}` : ''}
+                            </p>
+                          </div>
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${PRIORITY_META[t.priority]?.color || ''}`}>
+                            {PRIORITY_META[t.priority]?.label || t.priority}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded ${STATUS_META[t.status]?.color || 'bg-gray-100'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_META[t.status]?.dot || 'bg-gray-400'}`} />
+                            {STATUS_META[t.status]?.label || t.status}
+                          </span>
+                          {t.due_date && (
+                            <span className={`text-[10px] flex items-center gap-0.5 ${isOverdue(t.due_date, t.status) ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
+                              <Calendar size={10} /> {fmtDate(t.due_date)}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
                   </div>
 
                   {/* Pagination */}

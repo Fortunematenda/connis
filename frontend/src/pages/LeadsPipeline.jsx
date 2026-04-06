@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { Plus, RefreshCw, Loader2, LayoutGrid, List } from 'lucide-react';
+import { Plus, RefreshCw, Loader2, LayoutGrid, List, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import KanbanColumn from '../components/KanbanColumn';
 import LeadCard from '../components/LeadCard';
@@ -171,7 +171,8 @@ export default function LeadsPipeline() {
           onDragEnd={handleDragEnd}
           onDragCancel={handleDragCancel}
         >
-          <div className="flex gap-4 overflow-x-auto pb-4">
+          {/* Desktop: horizontal kanban */}
+          <div className="hidden md:flex gap-4 overflow-x-auto pb-4">
             {STAGES.map((stage) => (
               <KanbanColumn
                 key={stage.key}
@@ -181,6 +182,36 @@ export default function LeadsPipeline() {
                 onLeadClick={(lead) => setSelectedLead(lead)}
               />
             ))}
+          </div>
+
+          {/* Mobile: vertical stacked columns */}
+          <div className="md:hidden space-y-4">
+            {STAGES.map((stage) => {
+              const stageLeads = groupedLeads[stage.key] || [];
+              if (stageLeads.length === 0) return null;
+              return (
+                <div key={stage.key} className="bg-white rounded-xl border shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b bg-gray-50/50 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-800">{stage.label}</h3>
+                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{stageLeads.length}</span>
+                  </div>
+                  <div className="divide-y">
+                    {stageLeads.map((lead) => (
+                      <button key={lead.id} onClick={() => setSelectedLead(lead)}
+                        className="w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-900 truncate">{lead.name || lead.full_name}</p>
+                            <p className="text-xs text-gray-400 truncate mt-0.5">{lead.phone || lead.email || '—'}</p>
+                          </div>
+                          <ChevronRight size={14} className="text-gray-300 shrink-0 ml-2" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Drag overlay — renders the card "floating" while being dragged */}
@@ -195,48 +226,75 @@ export default function LeadsPipeline() {
       ) : (
         /* List view */
         <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b bg-gray-50/50">
-                <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Contact</th>
-                <th className="px-4 py-3 font-medium">Address</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Created By</th>
-                <th className="px-4 py-3 font-medium">Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leads.map((lead) => (
-                <tr
-                  key={lead.id}
-                  onClick={() => setSelectedLead(lead)}
-                  className="border-b last:border-0 hover:bg-gray-50 cursor-pointer"
-                >
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">{lead.name}</div>
-                    <div className="text-xs text-gray-400">{lead.email}</div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{lead.phone || '—'}</td>
-                  <td className="px-4 py-3 text-gray-600">{lead.address || '—'}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${
-                      lead.status === 'converted' ? 'text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200/60' :
-                      lead.status === 'lost' ? 'text-gray-600 bg-gray-100' :
-                      'text-blue-700 bg-blue-50 ring-1 ring-blue-200/60'
-                    }`}>
-                      {STAGES.find(s => s.key === lead.status)?.label || lead.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{lead.created_by_name || '—'}</td>
-                  <td className="px-4 py-3 text-xs text-gray-500">{new Date(lead.created_at).toLocaleDateString()}</td>
+          {/* Desktop table */}
+          <div className="hidden sm:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b bg-gray-50/50">
+                  <th className="px-4 py-3 font-medium">Name</th>
+                  <th className="px-4 py-3 font-medium">Contact</th>
+                  <th className="px-4 py-3 font-medium">Address</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Created By</th>
+                  <th className="px-4 py-3 font-medium">Created</th>
                 </tr>
-              ))}
-              {leads.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-400">No leads found</td></tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {leads.map((lead) => (
+                  <tr
+                    key={lead.id}
+                    onClick={() => setSelectedLead(lead)}
+                    className="border-b last:border-0 hover:bg-gray-50 cursor-pointer"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-gray-900">{lead.name}</div>
+                      <div className="text-xs text-gray-400">{lead.email}</div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{lead.phone || '—'}</td>
+                    <td className="px-4 py-3 text-gray-600">{lead.address || '—'}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                        lead.status === 'converted' ? 'text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200/60' :
+                        lead.status === 'lost' ? 'text-gray-600 bg-gray-100' :
+                        'text-blue-700 bg-blue-50 ring-1 ring-blue-200/60'
+                      }`}>
+                        {STAGES.find(s => s.key === lead.status)?.label || lead.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{lead.created_by_name || '—'}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">{new Date(lead.created_at).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+                {leads.length === 0 && (
+                  <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-400">No leads found</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {/* Mobile cards */}
+          <div className="sm:hidden divide-y">
+            {leads.length === 0 ? (
+              <p className="px-4 py-12 text-center text-gray-400 text-sm">No leads found</p>
+            ) : leads.map((lead) => (
+              <button key={lead.id} onClick={() => setSelectedLead(lead)}
+                className="w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900">{lead.name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                        lead.status === 'converted' ? 'text-emerald-700 bg-emerald-50' :
+                        lead.status === 'lost' ? 'text-gray-600 bg-gray-100' :
+                        'text-blue-700 bg-blue-50'
+                      }`}>{STAGES.find(s => s.key === lead.status)?.label || lead.status}</span>
+                      <span className="text-[10px] text-gray-400">{lead.phone || '—'}</span>
+                    </div>
+                  </div>
+                  <ChevronRight size={14} className="text-gray-300 shrink-0" />
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
