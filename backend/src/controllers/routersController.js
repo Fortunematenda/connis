@@ -1,15 +1,35 @@
 const pool = require('../config/db');
+const radiusDb = require('../config/radiusDb');
 const { ApiError } = require('../middleware/errorHandler');
 const { encrypt, decrypt } = require('../utils/encryption');
-const { createMikroTikClient, getPPPoESecrets } = require('../services/mikrotik');
+const { createMikroTikClient } = require('../services/mikrotik');
 
-// Background sync: import PPPoE secrets from router as customers
-const backgroundSync = async (companyId, routerConfig) => {
+// Profiles/usernames to exclude from sync (system accounts, not real customers)
+const EXCLUDED_PROFILES = ['vpn'];
+const EXCLUDED_USERNAMES = ['branch1', 'remote-admin', 'vpn'];
+
+// Background sync: import users from RADIUS DB (radcheck + radusergroup) as customers
+const backgroundSync = async (companyId) => {
   try {
-    const secrets = await getPPPoESecrets(routerConfig);
+    // 1. Get all RADIUS users with their passwords and groups
+    const radiusUsers = await radiusDb.query(`
+      SELECT rc.username, rc.value AS password,
+        (SELECT rug.groupname FROM radusergroup rug WHERE rug.username = rc.username LIMIT 1) AS groupname
+      FROM radcheck rc
+      WHERE rc.attribute = 'Cleartext-Password'
+      ORDER BY rc.username
+    `);
+
+    if (radiusUsers.rows.length === 0) {
+      console.log('[SYNC] No RADIUS users found');
+      return;
+    }
+
+    // 2. Get existing CONNIS customers
     const existingRes = await pool.query('SELECT username FROM users WHERE company_id = $1', [companyId]);
     const existing = new Set(existingRes.rows.map(r => r.username));
 
+    // 3. Get plans to match RADIUS groups
     const plansRes = await pool.query('SELECT id, name, mikrotik_profile FROM plans WHERE company_id = $1', [companyId]);
     const profileToPlan = {};
     plansRes.rows.forEach(p => {
@@ -18,18 +38,24 @@ const backgroundSync = async (companyId, routerConfig) => {
     });
 
     let imported = 0;
-    for (const secret of secrets) {
-      const username = secret.name;
-      if (!username || existing.has(username)) continue;
+    let skipped = 0;
+    for (const ru of radiusUsers.rows) {
+      const username = ru.username;
+
+      // Skip excluded usernames and profiles
+      if (!username || existing.has(username)) { skipped++; continue; }
+      if (EXCLUDED_USERNAMES.includes(username.toLowerCase())) { skipped++; continue; }
+      if (ru.groupname && EXCLUDED_PROFILES.includes(ru.groupname.toLowerCase())) { skipped++; continue; }
+
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
         const userRes = await client.query(
-          `INSERT INTO users (company_id, username, full_name, password, active, address)
-           VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-          [companyId, username, secret.comment || username, secret.password || '', secret.disabled !== 'true', secret['caller-id'] || null]
+          `INSERT INTO users (company_id, username, full_name, password, active)
+           VALUES ($1, $2, $3, $4, TRUE) RETURNING id`,
+          [companyId, username, username, ru.password || '']
         );
-        const planId = profileToPlan[secret.profile] || null;
+        const planId = profileToPlan[ru.groupname] || null;
         if (planId) {
           await client.query('INSERT INTO user_plans (user_id, plan_id, active) VALUES ($1, $2, TRUE) ON CONFLICT DO NOTHING', [userRes.rows[0].id, planId]);
         }
@@ -39,7 +65,7 @@ const backgroundSync = async (companyId, routerConfig) => {
       } catch { await client.query('ROLLBACK'); }
       finally { client.release(); }
     }
-    console.log(`[SYNC] Auto-imported ${imported} customers from router for company ${companyId}`);
+    console.log(`[SYNC] Auto-imported ${imported} customers from RADIUS DB (${skipped} skipped) for company ${companyId}`);
   } catch (err) {
     console.warn(`[SYNC] Background sync failed: ${err.message}`);
   }
@@ -71,13 +97,8 @@ const addRouter = async (req, res, next) => {
 
     res.status(201).json({ success: true, data: result.rows[0] });
 
-    // Auto-sync customers from router in background
-    backgroundSync(companyId, {
-      host: ip_address,
-      user: username || 'admin',
-      password,
-      port: port || 8728,
-    }).catch(() => {});
+    // Auto-sync customers from RADIUS DB in background
+    backgroundSync(companyId).catch(() => {});
   } catch (err) {
     next(err);
   }

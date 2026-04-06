@@ -77,23 +77,27 @@ const disconnectUser = async (req, res, next) => {
   }
 };
 
-// POST /mikrotik/sync-customers — Import PPPoE secrets from router as customers
+// POST /mikrotik/sync-customers — Import users from RADIUS DB as customers
+const EXCLUDED_PROFILES = ['vpn'];
+const EXCLUDED_USERNAMES = ['branch1', 'remote-admin', 'vpn'];
+
 const syncCustomersFromRouter = async (req, res, next) => {
   try {
     const companyId = req.companyId;
-    const routerConfig = await getRouterConfigForCompany(companyId);
-    const secrets = await mikrotik.getPPPoESecrets(routerConfig);
+    const radiusDb = require('../config/radiusDb');
 
-    // Get existing usernames in DB for this company
-    const existingRes = await pool.query(
-      'SELECT username FROM users WHERE company_id = $1', [companyId]
-    );
-    const existingUsernames = new Set(existingRes.rows.map(r => r.username));
+    const radiusUsers = await radiusDb.query(`
+      SELECT rc.username, rc.value AS password,
+        (SELECT rug.groupname FROM radusergroup rug WHERE rug.username = rc.username LIMIT 1) AS groupname
+      FROM radcheck rc
+      WHERE rc.attribute = 'Cleartext-Password'
+      ORDER BY rc.username
+    `);
 
-    // Get plans to match profiles
-    const plansRes = await pool.query(
-      'SELECT id, name, mikrotik_profile FROM plans WHERE company_id = $1', [companyId]
-    );
+    const existingRes = await pool.query('SELECT username FROM users WHERE company_id = $1', [companyId]);
+    const existing = new Set(existingRes.rows.map(r => r.username));
+
+    const plansRes = await pool.query('SELECT id, name, mikrotik_profile FROM plans WHERE company_id = $1', [companyId]);
     const profileToPlan = {};
     plansRes.rows.forEach(p => {
       if (p.mikrotik_profile) profileToPlan[p.mikrotik_profile] = p.id;
@@ -104,69 +108,41 @@ const syncCustomersFromRouter = async (req, res, next) => {
     let skipped = 0;
     const errors = [];
 
-    for (const secret of secrets) {
-      const username = secret.name;
-      if (!username || existingUsernames.has(username)) {
-        skipped++;
-        continue;
-      }
+    for (const ru of radiusUsers.rows) {
+      const username = ru.username;
+      if (!username || existing.has(username)) { skipped++; continue; }
+      if (EXCLUDED_USERNAMES.includes(username.toLowerCase())) { skipped++; continue; }
+      if (ru.groupname && EXCLUDED_PROFILES.includes(ru.groupname.toLowerCase())) { skipped++; continue; }
 
       try {
         const client = await pool.connect();
         try {
           await client.query('BEGIN');
-
-          // Insert user
           const userRes = await client.query(
-            `INSERT INTO users (company_id, username, full_name, password, active, address)
-             VALUES ($1, $2, $3, $4, $5, $6)
-             RETURNING id`,
-            [
-              companyId,
-              username,
-              secret.comment || username,
-              secret.password || '',
-              secret.disabled !== 'true',
-              secret['caller-id'] || null,
-            ]
+            `INSERT INTO users (company_id, username, full_name, password, active)
+             VALUES ($1, $2, $3, $4, TRUE) RETURNING id`,
+            [companyId, username, username, ru.password || '']
           );
-          const userId = userRes.rows[0].id;
-
-          // Match plan by profile name
-          const planId = profileToPlan[secret.profile] || null;
+          const planId = profileToPlan[ru.groupname] || null;
           if (planId) {
-            await client.query(
-              `INSERT INTO user_plans (user_id, plan_id, active) VALUES ($1, $2, TRUE)
-               ON CONFLICT DO NOTHING`,
-              [userId, planId]
-            );
+            await client.query('INSERT INTO user_plans (user_id, plan_id, active) VALUES ($1, $2, TRUE) ON CONFLICT DO NOTHING', [userRes.rows[0].id, planId]);
           }
-
           await client.query('COMMIT');
           imported++;
-          existingUsernames.add(username);
+          existing.add(username);
         } catch (e) {
           await client.query('ROLLBACK');
           errors.push(`${username}: ${e.message}`);
-        } finally {
-          client.release();
-        }
-      } catch (e) {
-        errors.push(`${username}: ${e.message}`);
-      }
+        } finally { client.release(); }
+      } catch (e) { errors.push(`${username}: ${e.message}`); }
     }
 
     res.json({
       success: true,
-      data: {
-        total_on_router: secrets.length,
-        imported,
-        skipped,
-        errors: errors.slice(0, 10),
-      },
+      data: { total_in_radius: radiusUsers.rows.length, imported, skipped, errors: errors.slice(0, 10) },
     });
   } catch (err) {
-    next(new ApiError(502, 'Failed to sync from router: ' + err.message));
+    next(new ApiError(502, 'Failed to sync from RADIUS: ' + err.message));
   }
 };
 
