@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
   ArrowDownCircle, ArrowUpCircle, Loader2, TicketCheck, Wallet,
-  Filter, Download, CreditCard, Building,
+  Filter, Download, CreditCard, Building, FileText, CheckCircle,
+  Clock, AlertTriangle, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { portalApi } from '../../services/api';
@@ -14,15 +15,18 @@ const fmtDateTime = (d) => d ? new Date(d).toLocaleString('en-GB', { day: '2-dig
 export default function PortalFinance() {
   const { user, refreshUser } = useOutletContext();
   const [transactions, setTransactions] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [company, setCompany] = useState(null);
   const [companyLoading, setCompanyLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [expandedInv, setExpandedInv] = useState(null);
 
   useEffect(() => {
     Promise.all([
       portalApi.getTransactions(100).then(res => setTransactions(res.data)).catch(() => {}),
-      portalApi.getCompany().then(res => setCompany(res.data)).catch(() => {})
+      portalApi.getCompany().then(res => setCompany(res.data)).catch(() => {}),
+      portalApi.getInvoices().then(res => setInvoices(res.data || [])).catch(() => {}),
     ]).finally(() => {
       setLoading(false);
       setCompanyLoading(false);
@@ -110,6 +114,70 @@ export default function PortalFinance() {
           </div>
         )}
       </div>
+
+      {/* Invoices */}
+      {invoices.length > 0 && (
+        <div className="bg-white rounded-xl border overflow-hidden">
+          <div className="px-4 py-3 border-b flex items-center gap-2">
+            <FileText size={16} className="text-gray-500" />
+            <h3 className="text-sm font-semibold text-gray-800">Invoices</h3>
+          </div>
+          <div className="divide-y">
+            {invoices.map(inv => {
+              const isPaid = inv.status === 'paid';
+              const isCredited = inv.status === 'credited';
+              const isExpanded = expandedInv === inv.id;
+              return (
+                <div key={inv.id}>
+                  <div className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-50/50" onClick={() => setExpandedInv(isExpanded ? null : inv.id)}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isPaid ? 'bg-emerald-50 text-emerald-600' : isCredited ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
+                        {isPaid ? <CheckCircle size={15} /> : isCredited ? <FileText size={15} /> : <Clock size={15} />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-800">{inv.invoice_number}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${isPaid ? 'bg-emerald-50 text-emerald-700' : isCredited ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'}`}>
+                            {isPaid ? 'Paid' : isCredited ? 'Credited' : inv.status === 'overdue' ? 'Overdue' : 'Issued'}
+                          </span>
+                          <span className="text-[10px] text-gray-400">{fmtDate(inv.created_at)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-sm font-bold text-gray-900">{fmtCurrency(inv.total)}</span>
+                      {isExpanded ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+                    </div>
+                  </div>
+                  {isExpanded && inv.items && (
+                    <div className="px-4 pb-3">
+                      <div className="border rounded-lg overflow-hidden text-xs">
+                        <table className="w-full">
+                          <thead><tr className="text-left text-[10px] text-gray-500 uppercase border-b bg-gray-50/50">
+                            <th className="px-3 py-1.5">Item</th><th className="px-3 py-1.5 text-right">Qty</th><th className="px-3 py-1.5 text-right">Price</th><th className="px-3 py-1.5 text-right">Total</th>
+                          </tr></thead>
+                          <tbody>
+                            {inv.items.map((it, i) => (
+                              <tr key={i} className="border-b last:border-0">
+                                <td className="px-3 py-1.5 text-gray-700">{it.description}</td>
+                                <td className="px-3 py-1.5 text-right text-gray-500">{parseFloat(it.quantity)}</td>
+                                <td className="px-3 py-1.5 text-right text-gray-500">{fmtCurrency(it.unit_price)}</td>
+                                <td className="px-3 py-1.5 text-right font-medium">{fmtCurrency(it.total)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot><tr className="bg-gray-50"><td colSpan="3" className="px-3 py-1.5 text-right font-bold">Total</td><td className="px-3 py-1.5 text-right font-bold">{fmtCurrency(inv.total)}</td></tr></tfoot>
+                        </table>
+                      </div>
+                      {inv.due_date && <p className="text-[10px] text-gray-400 mt-1">Due: {fmtDate(inv.due_date)}</p>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Transaction History */}
       <div className="bg-white rounded-xl border overflow-hidden">

@@ -700,6 +700,11 @@ export const portalApi = {
     return handlePortalResponse(res);
   },
 
+  getInvoices: async () => {
+    const res = await portalFetch(`${API_BASE}/portal/invoices`);
+    return handlePortalResponse(res);
+  },
+
   redeemVoucher: async (code) => {
     const res = await portalFetch(`${API_BASE}/portal/redeem`, {
       method: 'POST',

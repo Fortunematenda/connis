@@ -391,4 +391,21 @@ const getCompany = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { customerLogin, getMe, getTransactions, redeemVoucher, getTickets, createTicket, getTicketById, addTicketComment, getStatistics, getCompany };
+// GET /portal/invoices — Customer's invoices (exclude cancelled)
+const getInvoices = async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT i.*, 
+        (SELECT json_agg(json_build_object('description', ii.description, 'quantity', ii.quantity, 'unit_price', ii.unit_price, 'total', ii.total))
+         FROM invoice_items ii WHERE ii.invoice_id = i.id) AS items
+       FROM invoices i
+       WHERE i.user_id = $1 AND i.company_id = $2 AND i.status != 'cancelled'
+       ORDER BY i.created_at DESC
+       LIMIT 50`,
+      [req.userId, req.companyId]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) { next(err); }
+};
+
+module.exports = { customerLogin, getMe, getTransactions, redeemVoucher, getTickets, createTicket, getTicketById, addTicketComment, getStatistics, getCompany, getInvoices };

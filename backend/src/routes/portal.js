@@ -4,7 +4,7 @@ const path = require('path');
 const { authenticateCustomer } = require('../middleware/customerAuth');
 const {
   customerLogin, getMe, getTransactions, redeemVoucher,
-  getTickets, createTicket, getTicketById, addTicketComment, getStatistics, getCompany,
+  getTickets, createTicket, getTicketById, addTicketComment, getStatistics, getCompany, getInvoices,
 } = require('../controllers/portalController');
 const { getCustomerMessages, sendCustomerMessage, getCustomerUnreadCount } = require('../controllers/messagesController');
 
@@ -44,6 +44,7 @@ router.get('/messages', authenticateCustomer, getCustomerMessages);
 router.post('/messages', authenticateCustomer, sendCustomerMessage);
 router.get('/messages/unread-count', authenticateCustomer, getCustomerUnreadCount);
 router.get('/company', authenticateCustomer, getCompany);
+router.get('/invoices', authenticateCustomer, getInvoices);
 router.post('/upload', authenticateCustomer, upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
   const url = `/api/uploads/chat/${req.file.filename}`;
