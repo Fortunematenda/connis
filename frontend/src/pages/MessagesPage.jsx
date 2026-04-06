@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   MessageSquare, Send, Loader2, Search, ArrowLeft, User, Clock, Paperclip,
+  Phone, Mail, CalendarPlus, ExternalLink, X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { messagesApi } from '../services/api';
+import { messagesApi, tasksApi } from '../services/api';
 
 const fmtTime = (d) => d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
 const isImage = (url) => url && /\.(jpg|jpeg|png|gif|webp|heic|heif)$/i.test(url);
@@ -45,6 +46,9 @@ export default function MessagesPage() {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState('');
+  const [taskModal, setTaskModal] = useState(false);
+  const [taskForm, setTaskForm] = useState({ title: '', description: '', due_date: '', priority: 'medium' });
+  const [taskSaving, setTaskSaving] = useState(false);
   const bottomRef = useRef(null);
   const pollRef = useRef(null);
 
@@ -63,6 +67,10 @@ export default function MessagesPage() {
       const res = await messagesApi.getMessages(uid);
       setMessages(res.data.messages);
       setSelectedUser(res.data.user);
+      // Auto mark-read: update sidebar unread count immediately
+      setConversations(prev => prev.map(c =>
+        c.user_id === uid ? { ...c, unread_count: 0 } : c
+      ));
     } catch { toast.error('Failed to load messages'); }
     setMsgLoading(false);
   };
@@ -97,6 +105,29 @@ export default function MessagesPage() {
 
   const selectConversation = (uid) => {
     navigate(`/messages/${uid}`);
+  };
+
+  const handleScheduleTask = async () => {
+    if (!taskForm.title.trim()) { toast.error('Task title is required'); return; }
+    setTaskSaving(true);
+    try {
+      const task = await tasksApi.create({
+        user_id: userId,
+        title: taskForm.title,
+        description: taskForm.description,
+        priority: taskForm.priority,
+        due_date: taskForm.due_date || null,
+      });
+      // Send chat message to client about the scheduled task
+      const dateStr = taskForm.due_date ? new Date(taskForm.due_date).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : 'TBD';
+      const taskMsg = `📋 Task Scheduled: ${taskForm.title}\n\n${taskForm.description ? taskForm.description + '\n\n' : ''}📅 Scheduled: ${dateStr}\n⚡ Priority: ${taskForm.priority}\n\nPlease confirm your availability by replying to this message.`;
+      const msgRes = await messagesApi.send(userId, taskMsg);
+      setMessages([...messages, msgRes.data]);
+      setTaskModal(false);
+      setTaskForm({ title: '', description: '', due_date: '', priority: 'medium' });
+      toast.success('Task scheduled & client notified');
+    } catch (err) { toast.error(err.message); }
+    setTaskSaving(false);
   };
 
   const filtered = conversations.filter(c =>
@@ -161,22 +192,52 @@ export default function MessagesPage() {
       <div className={`flex-1 flex flex-col bg-gray-50 ${!userId ? 'hidden md:flex' : 'flex'}`}>
         {userId ? (
           <>
-            {/* Chat header */}
-            <div className="px-5 py-3 bg-white border-b flex items-center gap-3">
-              <button onClick={() => navigate('/messages')} className="md:hidden p-1 text-gray-400 hover:text-gray-600">
-                <ArrowLeft size={18} />
-              </button>
-              {selectedUser && (
+            {/* Chat header — with contact info + quick actions */}
+            <div className="px-5 py-3 bg-white border-b">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold">
-                    {(selectedUser.full_name || selectedUser.username || 'U')[0].toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{selectedUser.full_name || selectedUser.username}</p>
-                    <p className="text-[11px] text-gray-400">{selectedUser.username} {selectedUser.email ? `· ${selectedUser.email}` : ''}</p>
-                  </div>
+                  <button onClick={() => navigate('/messages')} className="md:hidden p-1 text-gray-400 hover:text-gray-600">
+                    <ArrowLeft size={18} />
+                  </button>
+                  {selectedUser && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold">
+                        {(selectedUser.full_name || selectedUser.username || 'U')[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{selectedUser.full_name || selectedUser.username}</p>
+                        <div className="flex items-center gap-3 mt-0.5">
+                          {selectedUser.email && (
+                            <span className="flex items-center gap-1 text-[11px] text-gray-400">
+                              <Mail size={10} /> {selectedUser.email}
+                            </span>
+                          )}
+                          {selectedUser.phone && (
+                            <span className="flex items-center gap-1 text-[11px] text-gray-400">
+                              <Phone size={10} /> {selectedUser.phone}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+                {/* Quick Actions */}
+                {selectedUser && (
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => { setTaskForm({ title: '', description: '', due_date: '', priority: 'medium' }); setTaskModal(true); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
+                      title="Schedule task for this client">
+                      <CalendarPlus size={13} /> Schedule Task
+                    </button>
+                    <button onClick={() => navigate(`/customers/${userId}`)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+                      title="View customer profile">
+                      <ExternalLink size={13} /> View Profile
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Messages */}
@@ -255,6 +316,63 @@ export default function MessagesPage() {
           </div>
         )}
       </div>
+
+      {/* Schedule Task Modal */}
+      {taskModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between px-5 py-4 border-b">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">Schedule Task for Client</h3>
+                <p className="text-[11px] text-gray-400 mt-0.5">The client will be notified via chat to confirm availability</p>
+              </div>
+              <button onClick={() => setTaskModal(false)} className="p-1 text-gray-400 hover:text-gray-600">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <div>
+                <label className="text-[11px] font-medium text-gray-500 mb-1 block">Task Title *</label>
+                <input type="text" value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
+                  placeholder="e.g. Router Installation, Site Visit..."
+                  className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-gray-500 mb-1 block">Description</label>
+                <textarea value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
+                  placeholder="Details about what needs to be done..."
+                  className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none h-20" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Scheduled Date</label>
+                  <input type="date" value={taskForm.due_date} onChange={(e) => setTaskForm({ ...taskForm, due_date: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Priority</label>
+                  <select value={taskForm.priority} onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-white">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t flex justify-end gap-2">
+              <button onClick={() => setTaskModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+                Cancel
+              </button>
+              <button onClick={handleScheduleTask} disabled={taskSaving}
+                className="px-4 py-2 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
+                {taskSaving ? <Loader2 size={14} className="animate-spin" /> : <CalendarPlus size={14} />}
+                Schedule & Notify Client
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
