@@ -1,12 +1,30 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  MessageSquare, Send, Loader2, Search, ArrowLeft, User, Clock,
+  MessageSquare, Send, Loader2, Search, ArrowLeft, User, Clock, Paperclip,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { messagesApi } from '../services/api';
 
 const fmtTime = (d) => d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+const isImage = (url) => url && /\.(jpg|jpeg|png|gif|webp|heic|heif)$/i.test(url);
+
+function ChatAttachment({ url, isAdmin }) {
+  if (!url) return null;
+  if (isImage(url)) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="block mt-1">
+        <img src={url} alt="attachment" className={`max-w-[220px] max-h-[200px] rounded-lg border ${isAdmin ? 'border-blue-400/30' : 'border-gray-200'} object-cover`} />
+      </a>
+    );
+  }
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer"
+      className={`flex items-center gap-1.5 mt-1 text-xs underline ${isAdmin ? 'text-blue-100' : 'text-blue-600'}`}>
+      <Paperclip size={12} /> View attachment
+    </a>
+  );
+}
 const fmtRelative = (d) => {
   if (!d) return '';
   const diff = (Date.now() - new Date(d).getTime()) / 1000;
@@ -192,9 +210,10 @@ export default function MessagesPage() {
                                 <p className={`text-[10px] mb-1 font-medium ${isAdmin ? 'opacity-70' : 'text-blue-600'}`}>Support Ticket</p>
                                 <p className="whitespace-pre-wrap">{m.content.replace('[Ticket] ', '')}</p>
                               </div>
-                            ) : (
+                            ) : m.content ? (
                               <p className="whitespace-pre-wrap">{m.content}</p>
-                            )}
+                            ) : null}
+                            <ChatAttachment url={m.attachment_url} isAdmin={isAdmin} />
                           </div>
                           <p className={`text-[10px] text-gray-400 mt-0.5 ${isAdmin ? 'text-right mr-1' : 'ml-1'}`}>
                             {fmtTime(m.created_at)}

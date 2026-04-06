@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+const path = require('path');
 const { errorHandler } = require('./middleware/errorHandler');
 const { authenticate, requireActiveSubscription } = require('./middleware/auth');
 const initDB = require('./db/init');
@@ -34,6 +35,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // ── Health check ───────────────────────────────────────────
 app.get('/api/health', (req, res) => {

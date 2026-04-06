@@ -65,13 +65,13 @@ const getMessages = async (req, res, next) => {
 const sendMessage = async (req, res, next) => {
   try {
     const { userId } = req.params;
-    const { content, ticket_id } = req.body;
-    if (!content) throw new ApiError(400, 'Content is required');
+    const { content, ticket_id, attachment_url } = req.body;
+    if (!content && !attachment_url) throw new ApiError(400, 'Content or attachment is required');
 
     const result = await pool.query(
-      `INSERT INTO messages (company_id, user_id, content, sender_type, sender_id, ticket_id)
-       VALUES ($1, $2, $3, 'admin', $4, $5) RETURNING *`,
-      [req.companyId, userId, content, req.adminId, ticket_id || null]
+      `INSERT INTO messages (company_id, user_id, content, sender_type, sender_id, ticket_id, attachment_url)
+       VALUES ($1, $2, $3, 'admin', $4, $5, $6) RETURNING *`,
+      [req.companyId, userId, content || '', req.adminId, ticket_id || null, attachment_url || null]
     );
 
     res.status(201).json({ success: true, data: result.rows[0] });
@@ -119,13 +119,13 @@ const getCustomerMessages = async (req, res, next) => {
 // POST /portal/messages — customer sends a message
 const sendCustomerMessage = async (req, res, next) => {
   try {
-    const { content, ticket_id } = req.body;
-    if (!content) throw new ApiError(400, 'Content is required');
+    const { content, ticket_id, attachment_url } = req.body;
+    if (!content && !attachment_url) throw new ApiError(400, 'Content or attachment is required');
 
     const result = await pool.query(
-      `INSERT INTO messages (company_id, user_id, content, sender_type, sender_id, ticket_id)
-       VALUES ($1, $2, $3, 'customer', $2, $4) RETURNING *`,
-      [req.companyId, req.userId, content, ticket_id || null]
+      `INSERT INTO messages (company_id, user_id, content, sender_type, sender_id, ticket_id, attachment_url)
+       VALUES ($1, $2, $3, 'customer', $2, $4, $5) RETURNING *`,
+      [req.companyId, req.userId, content || '', ticket_id || null, attachment_url || null]
     );
 
     // Get customer name for notification

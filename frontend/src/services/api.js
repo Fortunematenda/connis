@@ -580,9 +580,20 @@ export const portalApi = {
     const res = await portalFetch(`${API_BASE}/portal/messages`);
     return handlePortalResponse(res);
   },
-  sendMessage: async (content, ticketId) => {
+  sendMessage: async (content, ticketId, attachmentUrl) => {
     const res = await portalFetch(`${API_BASE}/portal/messages`, {
-      method: 'POST', body: JSON.stringify({ content, ticket_id: ticketId }),
+      method: 'POST', body: JSON.stringify({ content, ticket_id: ticketId, attachment_url: attachmentUrl }),
+    });
+    return handlePortalResponse(res);
+  },
+  uploadFile: async (file) => {
+    const token = localStorage.getItem('connis_portal_token');
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_BASE}/portal/upload`, {
+      method: 'POST',
+      headers: { ...(token && { Authorization: `Bearer ${token}` }) },
+      body: formData,
     });
     return handlePortalResponse(res);
   },

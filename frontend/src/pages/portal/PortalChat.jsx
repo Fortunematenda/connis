@@ -1,10 +1,28 @@
 import { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Send, Loader2, MessageSquare, Headphones } from 'lucide-react';
+import { Send, Loader2, MessageSquare, Headphones, Paperclip, X, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { portalApi } from '../../services/api';
 
 const fmtTime = (d) => d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+const isImage = (url) => url && /\.(jpg|jpeg|png|gif|webp|heic|heif)$/i.test(url);
+
+function ChatAttachment({ url, isMe }) {
+  if (!url) return null;
+  if (isImage(url)) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="block mt-1">
+        <img src={url} alt="attachment" className={`max-w-[220px] max-h-[200px] rounded-lg border ${isMe ? 'border-blue-400/30' : 'border-gray-200'} object-cover`} />
+      </a>
+    );
+  }
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer"
+      className={`flex items-center gap-1.5 mt-1 text-xs underline ${isMe ? 'text-blue-100' : 'text-blue-600'}`}>
+      <Paperclip size={12} /> View attachment
+    </a>
+  );
+}
 
 export default function PortalChat() {
   const { user } = useOutletContext();
@@ -12,7 +30,10 @@ export default function PortalChat() {
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState(null); // { file, dataUrl }
   const bottomRef = useRef(null);
+  const fileRef = useRef(null);
   const pollRef = useRef(null);
 
   const fetchMessages = async () => {
@@ -33,15 +54,37 @@ export default function PortalChat() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { toast.error('File too large (max 10MB)'); return; }
+    const reader = new FileReader();
+    reader.onload = () => setPreview({ file, dataUrl: reader.result });
+    reader.readAsDataURL(file);
+  };
+
+  const clearPreview = () => {
+    setPreview(null);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!text.trim()) return;
+    if (!text.trim() && !preview) return;
     setSending(true);
     try {
-      const res = await portalApi.sendMessage(text.trim());
+      let attachmentUrl = null;
+      if (preview) {
+        setUploading(true);
+        const uploadRes = await portalApi.uploadFile(preview.file);
+        attachmentUrl = uploadRes.data.url;
+        setUploading(false);
+      }
+      const res = await portalApi.sendMessage(text.trim() || (attachmentUrl ? '' : ''), null, attachmentUrl);
       setMessages([...messages, res.data]);
       setText('');
-    } catch (err) { toast.error(err.message); }
+      clearPreview();
+    } catch (err) { toast.error(err.message); setUploading(false); }
     setSending(false);
   };
 
@@ -86,9 +129,10 @@ export default function PortalChat() {
                           <p className="text-[10px] opacity-70 mb-1 font-medium">Support Ticket</p>
                           <p className="whitespace-pre-wrap">{m.content.replace('[Ticket] ', '')}</p>
                         </div>
-                      ) : (
+                      ) : m.content ? (
                         <p className="whitespace-pre-wrap">{m.content}</p>
-                      )}
+                      ) : null}
+                      <ChatAttachment url={m.attachment_url} isMe={isMe} />
                     </div>
                     <p className={`text-[10px] text-gray-400 mt-0.5 ${isMe ? 'text-right mr-1' : 'ml-1'}`}>
                       {fmtTime(m.created_at)}
@@ -108,8 +152,33 @@ export default function PortalChat() {
         )}
       </div>
 
+      {/* Preview */}
+      {preview && (
+        <div className="pt-2 flex items-center gap-2">
+          <div className="relative inline-block">
+            {isImage(preview.file.name) ? (
+              <img src={preview.dataUrl} alt="preview" className="w-16 h-16 rounded-lg object-cover border" />
+            ) : (
+              <div className="w-16 h-16 rounded-lg border bg-gray-50 flex items-center justify-center">
+                <Paperclip size={18} className="text-gray-400" />
+              </div>
+            )}
+            <button onClick={clearPreview}
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center shadow-sm">
+              <X size={10} />
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 truncate max-w-[200px]">{preview.file.name}</p>
+        </div>
+      )}
+
       {/* Input */}
-      <form onSubmit={handleSend} className="flex gap-2 pt-3">
+      <form onSubmit={handleSend} className="flex items-center gap-2 pt-3">
+        <input type="file" ref={fileRef} onChange={handleFileSelect} accept="image/*,.pdf" className="hidden" />
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
+          className="p-3 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors">
+          {uploading ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={18} />}
+        </button>
         <input
           type="text"
           value={text}
@@ -117,7 +186,7 @@ export default function PortalChat() {
           placeholder="Type a message..."
           className="flex-1 px-4 py-3 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-white"
         />
-        <button type="submit" disabled={sending || !text.trim()}
+        <button type="submit" disabled={sending || (!text.trim() && !preview)}
           className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors">
           {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
         </button>
