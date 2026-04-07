@@ -26,8 +26,8 @@ const getLiveUsage = async (req, res, next) => {
       return res.json({ success: true, data: [] });
     }
 
-    // Get current session data from radacct
-    const currentUsage = await bandwidthService.getUsageFromRadius(usernames);
+    // Get current session data (MikroTik API first, radacct fallback)
+    const currentUsage = await bandwidthService.getUsage(usernames, companyId);
 
     // Get latest rate samples from bandwidth_usage_log (last entry per user)
     const latestRates = await pool.query(

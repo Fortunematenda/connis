@@ -390,6 +390,7 @@ const testConnection = async (routerConfig) => {
 module.exports = {
   MikroTikClient,
   createMikroTikClient,
+  withConnection,
   createPPPoESecret,
   removePPPoESecret,
   updatePPPoESecret,

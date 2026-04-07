@@ -70,8 +70,8 @@ const monitorCompany = async (companyId) => {
   const usernames = usersRes.rows.map(u => u.username);
   const userMap = new Map(usersRes.rows.map(u => [u.username, u]));
 
-  // Fetch current traffic from RADIUS accounting
-  const currentUsage = await bandwidthService.getUsageFromRadius(usernames);
+  // Fetch current traffic (MikroTik API first, radacct fallback)
+  const currentUsage = await bandwidthService.getUsage(usernames, companyId);
 
   if (!previousSamples.has(companyId)) {
     previousSamples.set(companyId, new Map());

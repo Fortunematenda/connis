@@ -38,12 +38,77 @@ const generateRateLimit = (user, plan) => {
 // ── Usage from RADIUS Accounting ────────────────────────────
 
 /**
- * Get current session traffic for active users from radacct.
+ * Get current session traffic for active users.
+ * Primary: MikroTik interface stats (live tx/rx byte counters).
+ * Fallback: radacct (only has data if interim-update is configured).
+ *
  * Returns Map<username, { upload_bytes, download_bytes, session_seconds }>
+ */
+const getUsageFromMikrotik = async (usernames, companyId) => {
+  const usageMap = new Map();
+  try {
+    const routerConfig = await getRouterConfigForCompany(companyId);
+    if (!routerConfig) return usageMap;
+
+    // Get all active PPPoE sessions with their interface counters
+    const { withConnection } = require('./mikrotik');
+    const data = await withConnection(async (client) => {
+      // Get active PPP sessions
+      const sessions = await client.talk(['/ppp/active/print']);
+      const result = [];
+
+      for (const s of sessions) {
+        const username = s.name;
+        if (usernames.length > 0 && !usernames.includes(username)) continue;
+
+        // Get interface counters for this PPPoE interface
+        try {
+          const ifaces = await client.talk(['/interface/print', `?name=<pppoe-${username}>`]);
+          if (ifaces.length > 0) {
+            const iface = ifaces[0];
+            result.push({
+              username,
+              // From MikroTik perspective: tx = data sent TO client (download), rx = data FROM client (upload)
+              upload_bytes: Number(iface['rx-byte'] || 0),
+              download_bytes: Number(iface['tx-byte'] || 0),
+              uptime: s.uptime || '',
+            });
+          }
+        } catch {} // skip individual interface errors
+      }
+      return result;
+    }, routerConfig);
+
+    for (const entry of data) {
+      // Parse uptime string to seconds (e.g. "1d2h3m4s")
+      let sessionSeconds = 0;
+      const up = entry.uptime || '';
+      const dMatch = up.match(/(\d+)d/);
+      const hMatch = up.match(/(\d+)h/);
+      const mMatch = up.match(/(\d+)m/);
+      const sMatch = up.match(/(\d+)s/);
+      if (dMatch) sessionSeconds += parseInt(dMatch[1]) * 86400;
+      if (hMatch) sessionSeconds += parseInt(hMatch[1]) * 3600;
+      if (mMatch) sessionSeconds += parseInt(mMatch[1]) * 60;
+      if (sMatch) sessionSeconds += parseInt(sMatch[1]);
+
+      usageMap.set(entry.username, {
+        upload_bytes: entry.upload_bytes,
+        download_bytes: entry.download_bytes,
+        session_seconds: sessionSeconds,
+      });
+    }
+  } catch (err) {
+    console.warn(`[BW-SERVICE] MikroTik usage fetch failed: ${err.message}`);
+  }
+  return usageMap;
+};
+
+/**
+ * Fallback: get usage from radacct (only has non-zero data with interim-update).
  */
 const getUsageFromRadius = async (usernames = []) => {
   const usageMap = new Map();
-
   try {
     let query = `
       SELECT username,
@@ -54,25 +119,34 @@ const getUsageFromRadius = async (usernames = []) => {
       WHERE acctstoptime IS NULL
     `;
     const params = [];
-
     if (usernames.length > 0) {
       query += ` AND username = ANY($1)`;
       params.push(usernames);
     }
-
     const result = await radiusDb.query(query, params);
     for (const row of result.rows) {
       usageMap.set(row.username, {
-        upload_bytes: parseInt(row.upload_bytes),
-        download_bytes: parseInt(row.download_bytes),
-        session_seconds: parseInt(row.session_seconds),
+        upload_bytes: parseInt(row.upload_bytes) || 0,
+        download_bytes: parseInt(row.download_bytes) || 0,
+        session_seconds: parseInt(row.session_seconds) || 0,
       });
     }
   } catch (err) {
-    console.error(`[BW-SERVICE] Failed to fetch RADIUS accounting: ${err.message}`);
+    console.error(`[BW-SERVICE] RADIUS accounting fetch failed: ${err.message}`);
   }
-
   return usageMap;
+};
+
+/**
+ * Get usage: tries MikroTik first (live counters), falls back to radacct.
+ */
+const getUsage = async (usernames, companyId) => {
+  // Try MikroTik first — has real-time byte counters
+  const mkUsage = await getUsageFromMikrotik(usernames, companyId);
+  if (mkUsage.size > 0) return mkUsage;
+
+  // Fallback to radacct
+  return await getUsageFromRadius(usernames);
 };
 
 /**
@@ -338,6 +412,8 @@ const upsertSettings = async (companyId, settings) => {
 module.exports = {
   generateRateLimit,
   getUsageFromRadius,
+  getUsageFromMikrotik,
+  getUsage,
   computeUploadRateMbps,
   shouldFlag,
   shouldRecover,
