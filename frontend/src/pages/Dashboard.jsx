@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Users, UserCheck, Wifi, WifiOff, Target, Ticket, CheckSquare,
-  Coins, ArrowRight, ArrowUpRight, Loader2,
+  MessageSquare, ArrowRight, ArrowUpRight, Loader2,
   AlertTriangle, Clock, BarChart3, Ban, Power,
 } from 'lucide-react';
 import { dashboardApi, notificationsApi } from '../services/api';
@@ -141,12 +141,12 @@ export default function Dashboard() {
       {/* ── Secondary Stats Row ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          icon={<Coins size={20} />}
-          label="Active Plans"
-          value={c.active_plans || 0}
-          sub="service plans"
+          icon={<MessageSquare size={20} />}
+          label="New Messages"
+          value={c.unread_messages || 0}
+          sub="unread from customers"
           color="amber"
-          link="/plans"
+          link="/messages"
         />
         <StatCard
           icon={<Ticket size={20} />}
