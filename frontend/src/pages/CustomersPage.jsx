@@ -20,7 +20,9 @@ export default function CustomersPage() {
   const [ipMap, setIpMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(() => {
+    try { return localStorage.getItem('connis_cust_filter') || 'all'; } catch { return 'all'; }
+  });
   const [filterOpen, setFilterOpen] = useState(false);
   const [perPage, setPerPage] = useState(50);
   const [page, setPage] = useState(1);
@@ -214,7 +216,7 @@ export default function CustomersPage() {
                         f.key === 'blocked' ? counts.blocked : counts.lowBal;
                       return (
                         <button key={f.key}
-                          onClick={() => { setFilter(f.key); setPage(1); setFilterOpen(false); }}
+                          onClick={() => { setFilter(f.key); localStorage.setItem('connis_cust_filter', f.key); setPage(1); setFilterOpen(false); }}
                           className={`w-full flex items-center justify-between px-3.5 py-2.5 text-sm transition-colors ${
                             filter === f.key ? 'bg-amber-50 text-amber-700 font-semibold' : 'text-gray-700 hover:bg-gray-50'
                           }`}>
@@ -236,7 +238,7 @@ export default function CustomersPage() {
                   f.key === 'blocked' ? counts.blocked : counts.lowBal;
                 return (
                   <button key={f.key}
-                    onClick={() => { setFilter(f.key); setPage(1); }}
+                    onClick={() => { setFilter(f.key); localStorage.setItem('connis_cust_filter', f.key); setPage(1); }}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all active:scale-95 ${
                       filter === f.key
                         ? 'bg-amber-500/90 text-white shadow-sm'

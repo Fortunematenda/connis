@@ -54,27 +54,37 @@ const getCustomerStatistics = async (req, res, next) => {
     );
 
     // Supplement today's data with live MikroTik bytes for active sessions
-    // (radacct only records bytes when sessions end, so active sessions show 0)
+    // Bytes in bandwidth_usage_log are cumulative session counters, so we use
+    // delta (last - first snapshot today) to get today-only usage
     try {
       const todayStr = new Date().toISOString().split('T')[0];
-      const liveRow = await pool.query(
-        `SELECT DISTINCT ON (username)
-          upload_bytes, download_bytes
-         FROM bandwidth_usage_log
-         WHERE username = $1 AND company_id = $2 AND sampled_at >= CURRENT_DATE
-         ORDER BY username, sampled_at DESC`,
+      const deltaRow = await pool.query(
+        `WITH first_snap AS (
+           SELECT DISTINCT ON (username) upload_bytes AS ub, download_bytes AS db
+           FROM bandwidth_usage_log
+           WHERE username = $1 AND company_id = $2 AND sampled_at >= CURRENT_DATE
+           ORDER BY username, sampled_at ASC
+         ),
+         last_snap AS (
+           SELECT DISTINCT ON (username) upload_bytes AS ub, download_bytes AS db
+           FROM bandwidth_usage_log
+           WHERE username = $1 AND company_id = $2 AND sampled_at >= CURRENT_DATE
+           ORDER BY username, sampled_at DESC
+         )
+         SELECT
+           GREATEST(l.db - f.db, 0) AS download_delta,
+           GREATEST(l.ub - f.ub, 0) AS upload_delta
+         FROM last_snap l, first_snap f`,
         [username, req.companyId]
       );
-      if (liveRow.rows.length > 0) {
-        const live = liveRow.rows[0];
-        const liveUp = Number(live.upload_bytes) || 0;
-        const liveDown = Number(live.download_bytes) || 0;
+      if (deltaRow.rows.length > 0) {
+        const liveUp = Number(deltaRow.rows[0].upload_delta) || 0;
+        const liveDown = Number(deltaRow.rows[0].download_delta) || 0;
         const existingToday = dailyUsage.rows.find(r => {
           const d = r.date instanceof Date ? r.date.toISOString().split('T')[0] : r.date;
           return d === todayStr;
         });
         if (existingToday) {
-          // Use the larger of radacct vs live MikroTik data
           existingToday.download_bytes = Math.max(Number(existingToday.download_bytes), liveDown);
           existingToday.upload_bytes = Math.max(Number(existingToday.upload_bytes), liveUp);
         } else if (liveUp > 0 || liveDown > 0) {
