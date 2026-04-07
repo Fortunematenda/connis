@@ -48,56 +48,90 @@ const getUsageFromMikrotik = async (usernames, companyId) => {
   const usageMap = new Map();
   try {
     const routerConfig = await getRouterConfigForCompany(companyId);
-    if (!routerConfig) return usageMap;
-
-    // Get all active PPPoE sessions with their interface counters
-    const { withConnection } = require('./mikrotik');
-    const data = await withConnection(async (client) => {
-      // Get active PPP sessions
-      const sessions = await client.talk(['/ppp/active/print']);
-      const result = [];
-
-      for (const s of sessions) {
-        const username = s.name;
-        if (usernames.length > 0 && !usernames.includes(username)) continue;
-
-        // Get interface counters for this PPPoE interface
-        try {
-          const ifaces = await client.talk(['/interface/print', `?name=<pppoe-${username}>`]);
-          if (ifaces.length > 0) {
-            const iface = ifaces[0];
-            result.push({
-              username,
-              // From MikroTik perspective: tx = data sent TO client (download), rx = data FROM client (upload)
-              upload_bytes: Number(iface['rx-byte'] || 0),
-              download_bytes: Number(iface['tx-byte'] || 0),
-              uptime: s.uptime || '',
-            });
-          }
-        } catch {} // skip individual interface errors
-      }
-      return result;
-    }, routerConfig);
-
-    for (const entry of data) {
-      // Parse uptime string to seconds (e.g. "1d2h3m4s")
-      let sessionSeconds = 0;
-      const up = entry.uptime || '';
-      const dMatch = up.match(/(\d+)d/);
-      const hMatch = up.match(/(\d+)h/);
-      const mMatch = up.match(/(\d+)m/);
-      const sMatch = up.match(/(\d+)s/);
-      if (dMatch) sessionSeconds += parseInt(dMatch[1]) * 86400;
-      if (hMatch) sessionSeconds += parseInt(hMatch[1]) * 3600;
-      if (mMatch) sessionSeconds += parseInt(mMatch[1]) * 60;
-      if (sMatch) sessionSeconds += parseInt(sMatch[1]);
-
-      usageMap.set(entry.username, {
-        upload_bytes: entry.upload_bytes,
-        download_bytes: entry.download_bytes,
-        session_seconds: sessionSeconds,
-      });
+    if (!routerConfig) {
+      console.warn(`[BW-SERVICE] No router config for company ${companyId}`);
+      return usageMap;
     }
+
+    const { withConnection } = require('./mikrotik');
+    await withConnection(async (client) => {
+      // 1. Get active PPP sessions
+      const sessions = await client.talk(['/ppp/active/print']);
+      console.log(`[BW-SERVICE] Found ${sessions.length} active PPP sessions`);
+      if (sessions.length === 0) return;
+
+      // Build session map: username → uptime
+      const sessionMap = new Map();
+      for (const s of sessions) {
+        if (usernames.length > 0 && !usernames.includes(s.name)) continue;
+        sessionMap.set(s.name, s.uptime || '');
+      }
+
+      // 2. Get ALL interfaces in one call (much faster than per-user queries)
+      const allIfaces = await client.talk(['/interface/print']);
+      console.log(`[BW-SERVICE] Fetched ${allIfaces.length} interfaces total`);
+
+      // 3. Match PPPoE interfaces to usernames
+      // MikroTik names PPPoE server interfaces as "<pppoe-USERNAME>"
+      let matched = 0;
+      for (const iface of allIfaces) {
+        const ifName = iface.name || '';
+        // Match pattern: <pppoe-USERNAME> 
+        const match = ifName.match(/^<pppoe-(.+)>$/);
+        if (!match) continue;
+
+        const username = match[1];
+        if (!sessionMap.has(username)) continue;
+
+        const uploadBytes = Number(iface['rx-byte'] || 0);
+        const downloadBytes = Number(iface['tx-byte'] || 0);
+
+        // Parse uptime
+        let sessionSeconds = 0;
+        const up = sessionMap.get(username) || '';
+        const dM = up.match(/(\d+)d/);
+        const hM = up.match(/(\d+)h/);
+        const mM = up.match(/(\d+)m/);
+        const sM = up.match(/(\d+)s/);
+        if (dM) sessionSeconds += parseInt(dM[1]) * 86400;
+        if (hM) sessionSeconds += parseInt(hM[1]) * 3600;
+        if (mM) sessionSeconds += parseInt(mM[1]) * 60;
+        if (sM) sessionSeconds += parseInt(sM[1]);
+
+        usageMap.set(username, {
+          upload_bytes: uploadBytes,
+          download_bytes: downloadBytes,
+          session_seconds: sessionSeconds,
+        });
+        matched++;
+      }
+      console.log(`[BW-SERVICE] Matched ${matched} PPPoE interfaces to users`);
+
+      // If no <pppoe-X> matches, try alternate naming (pppoe-USERNAME without angle brackets)
+      if (matched === 0 && sessionMap.size > 0) {
+        console.log(`[BW-SERVICE] No <pppoe-X> matches, trying alternate names...`);
+        // Log first 3 interface names for debugging
+        const sampleNames = allIfaces.slice(0, 10).map(i => i.name).join(', ');
+        console.log(`[BW-SERVICE] Sample interface names: ${sampleNames}`);
+
+        for (const iface of allIfaces) {
+          const ifName = iface.name || '';
+          // Try patterns: pppoe-USERNAME, ppp-USERNAME, or just USERNAME
+          for (const [username] of sessionMap) {
+            if (ifName === `pppoe-${username}` || ifName === `ppp-${username}` || ifName === username) {
+              usageMap.set(username, {
+                upload_bytes: Number(iface['rx-byte'] || 0),
+                download_bytes: Number(iface['tx-byte'] || 0),
+                session_seconds: 0,
+              });
+              matched++;
+              break;
+            }
+          }
+        }
+        console.log(`[BW-SERVICE] Alternate matching found ${matched} interfaces`);
+      }
+    }, routerConfig);
   } catch (err) {
     console.warn(`[BW-SERVICE] MikroTik usage fetch failed: ${err.message}`);
   }
