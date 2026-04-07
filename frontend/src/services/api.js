@@ -512,6 +512,47 @@ export const invoicesApi = {
   },
 };
 
+// ── Bandwidth API ─────────────────────────────────────────────
+
+export const bandwidthApi = {
+  getLive: async () => {
+    const res = await authFetch(`${API_BASE}/bandwidth/live`);
+    return handleResponse(res);
+  },
+  getFlagged: async () => {
+    const res = await authFetch(`${API_BASE}/bandwidth/flagged`);
+    return handleResponse(res);
+  },
+  getTopUploaders: async () => {
+    const res = await authFetch(`${API_BASE}/bandwidth/top-uploaders`);
+    return handleResponse(res);
+  },
+  getHistory: async (userId) => {
+    const res = await authFetch(`${API_BASE}/bandwidth/history/${userId}`);
+    return handleResponse(res);
+  },
+  throttle: async (userId, reason) => {
+    const res = await authFetch(`${API_BASE}/bandwidth/throttle/${userId}`, {
+      method: 'POST', body: JSON.stringify({ reason }),
+    });
+    return handleResponse(res);
+  },
+  unthrottle: async (userId) => {
+    const res = await authFetch(`${API_BASE}/bandwidth/unthrottle/${userId}`, { method: 'POST' });
+    return handleResponse(res);
+  },
+  getSettings: async () => {
+    const res = await authFetch(`${API_BASE}/bandwidth/settings`);
+    return handleResponse(res);
+  },
+  updateSettings: async (settings) => {
+    const res = await authFetch(`${API_BASE}/bandwidth/settings`, {
+      method: 'PUT', body: JSON.stringify(settings),
+    });
+    return handleResponse(res);
+  },
+};
+
 // ── Accounting Dashboard API ──────────────────────────────────
 
 export const accountingDashboardApi = {

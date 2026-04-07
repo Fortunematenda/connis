@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, UserCheck, Ticket, MessageSquare, MoreHorizontal,
   Target, CheckSquare, Wifi, TicketCheck, Shield, Globe, Settings, X,
-  Receipt, FileText, ClipboardList, RotateCcw, Package, DollarSign,
+  Receipt, FileText, ClipboardList, RotateCcw, Package, DollarSign, Activity,
 } from 'lucide-react';
 import { messagesApi, notificationsApi } from '../services/api';
 
@@ -27,6 +27,7 @@ const moreSections = [
     items: [
       { to: '/plans', icon: Wifi, label: 'Plans', color: 'bg-blue-50 text-blue-600' },
       { to: '/vouchers', icon: TicketCheck, label: 'Vouchers', color: 'bg-emerald-50 text-emerald-600' },
+      { to: '/bandwidth', icon: Activity, label: 'Bandwidth', color: 'bg-red-50 text-red-600' },
     ],
   },
   {

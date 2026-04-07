@@ -30,6 +30,7 @@ const quotesRoutes = require('./routes/quotes');
 const creditNotesRoutes = require('./routes/creditNotes');
 const billableItemsRoutes = require('./routes/billableItems');
 const { getAccountingDashboard } = require('./controllers/accountingDashboardController');
+const bandwidthRoutes = require('./routes/bandwidth');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -74,6 +75,7 @@ app.use('/api/quotes', protect, quotesRoutes);
 app.use('/api/credit-notes', protect, creditNotesRoutes);
 app.use('/api/billable-items', protect, billableItemsRoutes);
 app.get('/api/accounting/dashboard', protect, getAccountingDashboard);
+app.use('/api/bandwidth', protect, bandwidthRoutes);
 
 // ── 404 handler ────────────────────────────────────────────
 app.use((req, res) => {
@@ -86,6 +88,7 @@ app.use(errorHandler);
 // ── Start server ───────────────────────────────────────────
 const { runDailyDeductions } = require('./services/billingService');
 const { generateMonthlyInvoices } = require('./services/invoiceService');
+const bandwidthMonitor = require('./services/bandwidthMonitor');
 
 const start = async () => {
   try {
@@ -115,6 +118,9 @@ const start = async () => {
       runBillingCycle();
       setInterval(runBillingCycle, BILLING_INTERVAL);
     }, 60000); // Wait 1 min after startup before first run
+
+    // Start bandwidth monitor (every 2 minutes)
+    bandwidthMonitor.start(120_000);
   } catch (err) {
     console.error('[SERVER] Failed to start:', err.message);
     process.exit(1);

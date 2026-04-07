@@ -21,6 +21,7 @@ import {
   ClipboardList,
   RotateCcw,
   Package,
+  Activity,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -33,6 +34,7 @@ const navItems = [
   { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
   { to: '/plans', icon: Wifi, label: 'Plans' },
   { to: '/vouchers', icon: TicketCheck, label: 'Vouchers' },
+  { to: '/bandwidth', icon: Activity, label: 'Bandwidth' },
 ];
 
 const accountingItems = [

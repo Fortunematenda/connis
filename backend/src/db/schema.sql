@@ -520,3 +520,50 @@ CREATE TABLE IF NOT EXISTS credit_note_items (
 );
 
 CREATE INDEX IF NOT EXISTS idx_credit_note_items_cn ON credit_note_items(credit_note_id);
+
+-- ============================================================
+-- BANDWIDTH ABUSE TRACKING — columns on users table
+-- ============================================================
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_flagged BOOLEAN DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS flagged_at TIMESTAMP;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS flag_reason VARCHAR(200);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS original_rate_limit VARCHAR(100);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS throttled_rate_limit VARCHAR(100);
+
+-- ============================================================
+-- BANDWIDTH USAGE LOG — periodic snapshots for abuse detection
+-- ============================================================
+CREATE TABLE IF NOT EXISTS bandwidth_usage_log (
+  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  company_id    UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  username      VARCHAR(100) NOT NULL,
+  upload_bytes  BIGINT DEFAULT 0,
+  download_bytes BIGINT DEFAULT 0,
+  upload_rate   NUMERIC(10, 2) DEFAULT 0,   -- Mbps at sample time
+  download_rate NUMERIC(10, 2) DEFAULT 0,   -- Mbps at sample time
+  source        VARCHAR(20) DEFAULT 'radacct', -- radacct, mikrotik
+  sampled_at    TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_bw_log_user ON bandwidth_usage_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_bw_log_company ON bandwidth_usage_log(company_id);
+CREATE INDEX IF NOT EXISTS idx_bw_log_sampled ON bandwidth_usage_log(sampled_at);
+
+-- ============================================================
+-- BANDWIDTH SETTINGS — per-company configuration
+-- ============================================================
+CREATE TABLE IF NOT EXISTS bandwidth_settings (
+  id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  company_id            UUID UNIQUE NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  upload_threshold_mbps NUMERIC(6, 2) DEFAULT 1.5,    -- flag if upload sustained above this
+  sustained_minutes     INTEGER DEFAULT 5,              -- how many minutes of high upload before flagging
+  throttle_download     VARCHAR(20) DEFAULT '5M',       -- throttled download speed
+  throttle_upload       VARCHAR(20) DEFAULT '1M',       -- throttled upload speed
+  auto_recover          BOOLEAN DEFAULT TRUE,            -- auto-unflag when usage normalizes
+  recover_minutes       INTEGER DEFAULT 30,              -- minutes of normal usage before unflag
+  monitor_interval_sec  INTEGER DEFAULT 120,             -- how often to sample (seconds)
+  enabled               BOOLEAN DEFAULT TRUE,
+  created_at            TIMESTAMP DEFAULT NOW(),
+  updated_at            TIMESTAMP DEFAULT NOW()
+);

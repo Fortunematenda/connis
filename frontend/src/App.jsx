@@ -21,6 +21,7 @@ import QuotesPage from './pages/QuotesPage';
 import CreditNotesPage from './pages/CreditNotesPage';
 import ItemsPage from './pages/ItemsPage';
 import AccountingDashboard from './pages/AccountingDashboard';
+import BandwidthDashboard from './pages/BandwidthDashboard';
 import PortalLogin from './pages/portal/PortalLogin';
 import PortalLayout from './components/portal/PortalLayout';
 import PortalDashboard from './pages/portal/PortalDashboard';
@@ -67,6 +68,7 @@ export default function App() {
         <Route path="/accounting/quotes" element={<QuotesPage />} />
         <Route path="/accounting/credits" element={<CreditNotesPage />} />
         <Route path="/accounting/items" element={<ItemsPage />} />
+        <Route path="/bandwidth" element={<BandwidthDashboard />} />
         <Route path="/network" element={<NetworkPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
