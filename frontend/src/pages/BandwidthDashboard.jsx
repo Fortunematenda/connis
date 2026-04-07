@@ -54,9 +54,9 @@ export default function BandwidthDashboard() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Auto-refresh every 30s
+  // Auto-refresh every 15s for live updates
   useEffect(() => {
-    const timer = setInterval(() => fetchData(true), 30000);
+    const timer = setInterval(() => fetchData(true), 15000);
     return () => clearInterval(timer);
   }, [fetchData]);
 
@@ -173,6 +173,7 @@ export default function BandwidthDashboard() {
                 <th className="px-3 py-3">Rate Limit</th>
                 <th className="px-3 py-3 text-right">↑ Upload</th>
                 <th className="px-3 py-3 text-right">↓ Download</th>
+                <th className="px-3 py-3 text-right">Total Used</th>
                 <th className="px-3 py-3 text-right">Session</th>
                 <th className="px-3 py-3">Status</th>
                 <th className="px-3 py-3 text-right">Actions</th>
@@ -180,7 +181,7 @@ export default function BandwidthDashboard() {
             </thead>
             <tbody className="divide-y">
               {filtered.length === 0 ? (
-                <tr><td colSpan="8" className="px-4 py-12 text-center text-gray-400">No users in this view</td></tr>
+                <tr><td colSpan="9" className="px-4 py-12 text-center text-gray-400">No users in this view</td></tr>
               ) : filtered.map(u => (
                 <UserRow key={u.id} user={u}
                   expanded={expandedUser === u.id}
@@ -251,6 +252,15 @@ function UserRow({ user: u, expanded, onToggle, onThrottle, onUnthrottle, onNavi
         <td className="px-3 py-3 text-right text-xs text-gray-600">
           {u.is_online ? fmtMbps(u.current_download_mbps) : '—'}
         </td>
+        <td className="px-3 py-3 text-right text-[10px] text-gray-500">
+          {u.is_online ? (
+            <div>
+              <span className="text-red-500">↑{fmtBytes(u.upload_bytes)}</span>
+              {' '}
+              <span className="text-blue-500">↓{fmtBytes(u.download_bytes)}</span>
+            </div>
+          ) : '—'}
+        </td>
         <td className="px-3 py-3 text-right text-[11px] text-gray-500">
           {u.is_online ? (
             <span className="flex items-center gap-1 justify-end"><Clock size={10} />{fmtUptime(u.session_seconds)}</span>
@@ -285,7 +295,7 @@ function UserRow({ user: u, expanded, onToggle, onThrottle, onUnthrottle, onNavi
       </tr>
       {expanded && (
         <tr>
-          <td colSpan="8" className="px-4 py-3 bg-gray-50/50">
+          <td colSpan="9" className="px-4 py-3 bg-gray-50/50">
             {historyLoading ? (
               <div className="flex justify-center py-4"><Loader2 size={16} className="animate-spin text-gray-400" /></div>
             ) : history.length > 0 ? (

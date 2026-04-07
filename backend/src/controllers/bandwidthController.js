@@ -48,6 +48,20 @@ const getLiveUsage = async (req, res, next) => {
         download_speed: user.download_speed,
       });
 
+      const uploadBytes = usage?.upload_bytes || 0;
+      const downloadBytes = usage?.download_bytes || 0;
+      const sessionSec = usage?.session_seconds || 0;
+
+      // Use log rates if available, otherwise compute average from total bytes/session time
+      let uploadMbps = rate ? parseFloat(rate.upload_rate) : 0;
+      let downloadMbps = rate ? parseFloat(rate.download_rate) : 0;
+      if (uploadMbps === 0 && uploadBytes > 0 && sessionSec > 0) {
+        uploadMbps = (uploadBytes * 8) / sessionSec / 1_000_000;
+      }
+      if (downloadMbps === 0 && downloadBytes > 0 && sessionSec > 0) {
+        downloadMbps = (downloadBytes * 8) / sessionSec / 1_000_000;
+      }
+
       return {
         id: user.id,
         username: user.username,
@@ -60,19 +74,19 @@ const getLiveUsage = async (req, res, next) => {
         flagged_at: user.flagged_at,
         flag_reason: user.flag_reason,
         is_online: !!usage,
-        session_seconds: usage?.session_seconds || 0,
-        upload_bytes: usage?.upload_bytes || 0,
-        download_bytes: usage?.download_bytes || 0,
-        current_upload_mbps: rate ? parseFloat(rate.upload_rate) : 0,
-        current_download_mbps: rate ? parseFloat(rate.download_rate) : 0,
+        session_seconds: sessionSec,
+        upload_bytes: uploadBytes,
+        download_bytes: downloadBytes,
+        current_upload_mbps: parseFloat(uploadMbps.toFixed(2)),
+        current_download_mbps: parseFloat(downloadMbps.toFixed(2)),
         last_sampled: rate?.sampled_at || null,
       };
     });
 
-    // Sort: online first, then by upload rate descending
+    // Sort: online first, then by upload bytes descending (most usage on top)
     data.sort((a, b) => {
       if (a.is_online !== b.is_online) return b.is_online - a.is_online;
-      return b.current_upload_mbps - a.current_upload_mbps;
+      return b.upload_bytes - a.upload_bytes;
     });
 
     res.json({ success: true, data });
