@@ -592,23 +592,11 @@ function AggregateLiveChart({ uploadMbps, downloadMbps }) {
     const now = Date.now();
     const up = Number(uploadMbps) || 0;
     const down = Number(downloadMbps) || 0;
-    if (up > 0 || down > 0) {
-      dataRef.current.push({ time: now, upload: up, download: down });
-      const cutoff = now - 600000;
-      dataRef.current = dataRef.current.filter(p => p.time > cutoff);
-    }
+    dataRef.current.push({ time: now, upload: up, download: down });
+    const cutoff = now - 600000;
+    dataRef.current = dataRef.current.filter(p => p.time > cutoff);
     setRates({ upload: up, download: down });
   }, [uploadMbps, downloadMbps]);
-
-  // Pre-seed with zeros
-  useEffect(() => {
-    const now = Date.now();
-    const seed = [];
-    for (let t = now - 600000; t <= now; t += 10000) {
-      seed.push({ time: t, upload: 0, download: 0 });
-    }
-    dataRef.current = seed;
-  }, []);
 
   // Canvas draw loop
   useEffect(() => {
@@ -638,7 +626,19 @@ function AggregateLiveChart({ uploadMbps, downloadMbps }) {
       const dur = durationRef.current;
       const tStart = now - dur;
       const tEnd = now;
-      const pts = dataRef.current.filter(p => p.time >= tStart && p.time <= tEnd);
+      let pts = dataRef.current.filter(p => p.time >= tStart && p.time <= tEnd);
+
+      // Fill edges: extend first point to tStart and last point to tEnd
+      if (pts.length > 0) {
+        const first = pts[0];
+        const last = pts[pts.length - 1];
+        if (first.time > tStart + 2000) {
+          pts = [{ time: tStart, upload: 0, download: 0 }, ...pts];
+        }
+        if (last.time < tEnd - 2000) {
+          pts = [...pts, { time: tEnd, upload: last.upload, download: last.download }];
+        }
+      }
 
       let maxVal = 0;
       pts.forEach(p => { maxVal = Math.max(maxVal, p.upload, p.download); });
