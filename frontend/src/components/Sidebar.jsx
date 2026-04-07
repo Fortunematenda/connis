@@ -33,7 +33,6 @@ const navItems = [
   { to: '/messages', icon: MessageSquare, label: 'Messages' },
   { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
   { to: '/plans', icon: Wifi, label: 'Plans' },
-  { to: '/vouchers', icon: TicketCheck, label: 'Vouchers' },
   { to: '/bandwidth', icon: Activity, label: 'Bandwidth' },
 ];
 
@@ -44,6 +43,7 @@ const accountingItems = [
   { to: '/accounting/quotes', icon: ClipboardList, label: 'Quotes' },
   { to: '/accounting/credits', icon: RotateCcw, label: 'Credit Notes' },
   { to: '/accounting/items', icon: Package, label: 'Items' },
+  { to: '/vouchers', icon: TicketCheck, label: 'Vouchers' },
 ];
 
 const bottomItems = [

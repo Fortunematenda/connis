@@ -26,7 +26,6 @@ const moreSections = [
     title: 'Billing',
     items: [
       { to: '/plans', icon: Wifi, label: 'Plans', color: 'bg-blue-50 text-blue-600' },
-      { to: '/vouchers', icon: TicketCheck, label: 'Vouchers', color: 'bg-emerald-50 text-emerald-600' },
       { to: '/bandwidth', icon: Activity, label: 'Bandwidth', color: 'bg-red-50 text-red-600' },
     ],
   },
@@ -39,6 +38,7 @@ const moreSections = [
       { to: '/accounting/quotes', icon: ClipboardList, label: 'Quotes', color: 'bg-violet-50 text-violet-600' },
       { to: '/accounting/credits', icon: RotateCcw, label: 'Credits', color: 'bg-teal-50 text-teal-600' },
       { to: '/accounting/items', icon: Package, label: 'Items', color: 'bg-amber-50 text-amber-600' },
+      { to: '/vouchers', icon: TicketCheck, label: 'Vouchers', color: 'bg-emerald-50 text-emerald-600' },
     ],
   },
   {
