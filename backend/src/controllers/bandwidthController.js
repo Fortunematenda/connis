@@ -10,7 +10,7 @@ const getLiveUsage = async (req, res, next) => {
 
     // Get all active users with plan info
     const usersRes = await pool.query(
-      `SELECT u.id, u.username, u.full_name, u.is_flagged, u.flagged_at, u.flag_reason,
+      `SELECT u.id, u.username, u.full_name, u.seq_id, u.is_flagged, u.flagged_at, u.flag_reason,
         u.original_rate_limit, u.throttled_rate_limit,
         p.name AS plan_name, p.download_speed, p.upload_speed, p.radius_rate_limit
        FROM users u
@@ -64,6 +64,7 @@ const getLiveUsage = async (req, res, next) => {
 
       return {
         id: user.id,
+        seq_id: user.seq_id,
         username: user.username,
         full_name: user.full_name,
         plan_name: user.plan_name,

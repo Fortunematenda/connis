@@ -269,8 +269,8 @@ export default function BandwidthDashboard() {
             <tbody className="divide-y divide-gray-100">
               {filtered.length === 0 ? (
                 <tr><td colSpan="10" className="px-4 py-12 text-center text-gray-400">No users in this view</td></tr>
-              ) : filtered.map((u, idx) => (
-                <UserRow key={u.id} user={u} seq={idx + 1}
+              ) : filtered.map((u) => (
+                <UserRow key={u.id} user={u} seq={u.seq_id || '—'}
                   expanded={expandedUser === u.id}
                   onToggle={() => toggleExpand(u.id)}
                   onThrottle={() => handleThrottle(u.id, u.username)}
