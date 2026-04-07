@@ -26,7 +26,7 @@ const fmtGB = (b) => {
   if (n <= 0) return '0';
   return (n / 1073741824).toFixed(2);
 };
-const fmtMbps = (v) => (parseFloat(v) || 0).toFixed(2);
+const fmtMbps = (v) => (parseFloat(v) || 0).toFixed(2) + ' Mbps';
 const fmtUptime = (s) => {
   if (!s) return '—';
   const d = Math.floor(s / 86400);
@@ -445,7 +445,8 @@ function ExpandedRow({ history, loading, username }) {
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
             <XAxis dataKey="time" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false}
+              tickFormatter={v => `${v} Mbps`} />
             <Tooltip content={<MiniTooltip />} />
             <Area type="monotone" dataKey="download" stroke="#3b82f6" strokeWidth={1.5}
               fill={`url(#muD-${username})`} name="Download" />

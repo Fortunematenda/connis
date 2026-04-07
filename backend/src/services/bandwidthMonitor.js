@@ -79,10 +79,14 @@ const monitorCompany = async (companyId) => {
   const prevMap = previousSamples.get(companyId);
   const now = Date.now();
 
+  // Accumulators for aggregate snapshot
+  let aggUpload = 0, aggDownload = 0, aggOnline = 0;
+
   for (const [username, current] of currentUsage) {
     const user = userMap.get(username);
     if (!user) continue;
 
+    aggOnline++;
     const prev = prevMap.get(username);
     let uploadRateMbps = 0;
     let downloadRateMbps = 0;
@@ -98,6 +102,8 @@ const monitorCompany = async (companyId) => {
         );
         if (uploadRateMbps < 0) uploadRateMbps = 0;
         if (downloadRateMbps < 0) downloadRateMbps = 0;
+        aggUpload += uploadRateMbps;
+        aggDownload += downloadRateMbps;
       }
     }
 
@@ -149,29 +155,13 @@ const monitorCompany = async (companyId) => {
 
   // ── Store aggregate snapshot for the chart ──────────────────
   try {
-    let totalUpload = 0, totalDownload = 0, onlineCount = 0;
-    for (const [username, current] of currentUsage) {
-      const user = userMap.get(username);
-      if (!user) continue;
-      onlineCount++;
-      const prev = prevMap.get(username);
-      if (prev) {
-        const deltaSec = (now - prev.timestamp) / 1000;
-        if (deltaSec > 0) {
-          const uRate = bandwidthService.computeUploadRateMbps(current.upload_bytes, prev.upload_bytes, deltaSec);
-          const dRate = bandwidthService.computeUploadRateMbps(current.download_bytes, prev.download_bytes, deltaSec);
-          if (uRate > 0) totalUpload += uRate;
-          if (dRate > 0) totalDownload += dRate;
-        }
-      }
-    }
     await pool.query(
       `INSERT INTO bandwidth_aggregate_log (company_id, total_upload_mbps, total_download_mbps, active_users, sampled_at)
        VALUES ($1, $2, $3, $4, NOW())`,
-      [companyId, totalUpload.toFixed(2), totalDownload.toFixed(2), onlineCount]
+      [companyId, aggUpload.toFixed(2), aggDownload.toFixed(2), aggOnline]
     );
+    console.log(`[BW-MONITOR] Aggregate: ↓${aggDownload.toFixed(1)} ↑${aggUpload.toFixed(1)} Mbps, ${aggOnline} users`);
   } catch (err) {
-    // Table might not exist yet — non-critical
     if (!err.message.includes('does not exist')) {
       console.warn(`[BW-MONITOR] Failed to store aggregate: ${err.message}`);
     }

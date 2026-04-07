@@ -53,6 +53,43 @@ const getCustomerStatistics = async (req, res, next) => {
       [username, startDate.toISOString()]
     );
 
+    // Supplement today's data with live MikroTik bytes for active sessions
+    // (radacct only records bytes when sessions end, so active sessions show 0)
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const liveRow = await pool.query(
+        `SELECT DISTINCT ON (username)
+          upload_bytes, download_bytes
+         FROM bandwidth_usage_log
+         WHERE username = $1 AND company_id = $2 AND sampled_at >= CURRENT_DATE
+         ORDER BY username, sampled_at DESC`,
+        [username, req.companyId]
+      );
+      if (liveRow.rows.length > 0) {
+        const live = liveRow.rows[0];
+        const liveUp = Number(live.upload_bytes) || 0;
+        const liveDown = Number(live.download_bytes) || 0;
+        const existingToday = dailyUsage.rows.find(r => {
+          const d = r.date instanceof Date ? r.date.toISOString().split('T')[0] : r.date;
+          return d === todayStr;
+        });
+        if (existingToday) {
+          // Use the larger of radacct vs live MikroTik data
+          existingToday.download_bytes = Math.max(Number(existingToday.download_bytes), liveDown);
+          existingToday.upload_bytes = Math.max(Number(existingToday.upload_bytes), liveUp);
+        } else if (liveUp > 0 || liveDown > 0) {
+          dailyUsage.rows.push({
+            date: todayStr,
+            download_bytes: liveDown,
+            upload_bytes: liveUp,
+            sessions: 1,
+          });
+        }
+      }
+    } catch (err) {
+      // Non-critical — bandwidth_usage_log may not have data yet
+    }
+
     // 2. Total usage summary
     const totalUsage = await radiusDb.query(
       `SELECT
