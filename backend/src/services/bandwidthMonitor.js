@@ -147,12 +147,46 @@ const monitorCompany = async (companyId) => {
     }
   }
 
-  // Clean old logs (keep 24 hours)
+  // ── Store aggregate snapshot for the chart ──────────────────
+  try {
+    let totalUpload = 0, totalDownload = 0, onlineCount = 0;
+    for (const [username, current] of currentUsage) {
+      const user = userMap.get(username);
+      if (!user) continue;
+      onlineCount++;
+      const prev = prevMap.get(username);
+      if (prev) {
+        const deltaSec = (now - prev.timestamp) / 1000;
+        if (deltaSec > 0) {
+          const uRate = bandwidthService.computeUploadRateMbps(current.upload_bytes, prev.upload_bytes, deltaSec);
+          const dRate = bandwidthService.computeUploadRateMbps(current.download_bytes, prev.download_bytes, deltaSec);
+          if (uRate > 0) totalUpload += uRate;
+          if (dRate > 0) totalDownload += dRate;
+        }
+      }
+    }
+    await pool.query(
+      `INSERT INTO bandwidth_aggregate_log (company_id, total_upload_mbps, total_download_mbps, active_users, sampled_at)
+       VALUES ($1, $2, $3, $4, NOW())`,
+      [companyId, totalUpload.toFixed(2), totalDownload.toFixed(2), onlineCount]
+    );
+  } catch (err) {
+    // Table might not exist yet — non-critical
+    if (!err.message.includes('does not exist')) {
+      console.warn(`[BW-MONITOR] Failed to store aggregate: ${err.message}`);
+    }
+  }
+
+  // Clean old logs (keep 7 days)
   try {
     await pool.query(
-      `DELETE FROM bandwidth_usage_log WHERE company_id = $1 AND sampled_at < NOW() - INTERVAL '24 hours'`,
+      `DELETE FROM bandwidth_usage_log WHERE company_id = $1 AND sampled_at < NOW() - INTERVAL '7 days'`,
       [companyId]
     );
+    await pool.query(
+      `DELETE FROM bandwidth_aggregate_log WHERE company_id = $1 AND sampled_at < NOW() - INTERVAL '7 days'`,
+      [companyId]
+    ).catch(() => {});
   } catch {} // non-critical
 };
 

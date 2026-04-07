@@ -519,6 +519,10 @@ export const bandwidthApi = {
     const res = await authFetch(`${API_BASE}/bandwidth/live`);
     return handleResponse(res);
   },
+  getAggregate: async (range = '1h') => {
+    const res = await authFetch(`${API_BASE}/bandwidth/aggregate?range=${range}`);
+    return handleResponse(res);
+  },
   getFlagged: async () => {
     const res = await authFetch(`${API_BASE}/bandwidth/flagged`);
     return handleResponse(res);

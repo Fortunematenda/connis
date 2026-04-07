@@ -1,12 +1,13 @@
 const express = require('express');
 const {
-  getLiveUsage, getFlaggedUsers, throttleUser, unthrottleUser,
+  getLiveUsage, getAggregate, getFlaggedUsers, throttleUser, unthrottleUser,
   getUserHistory, getSettings, updateSettings, getTopUploaders,
 } = require('../controllers/bandwidthController');
 
 const router = express.Router();
 
 router.get('/live', getLiveUsage);
+router.get('/aggregate', getAggregate);
 router.get('/flagged', getFlaggedUsers);
 router.get('/top-uploaders', getTopUploaders);
 router.get('/history/:userId', getUserHistory);

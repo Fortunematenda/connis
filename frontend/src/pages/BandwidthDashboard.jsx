@@ -1,13 +1,18 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, memo, useMemo, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Activity, AlertTriangle, ArrowUpCircle, ArrowDownCircle, Loader2,
-  Shield, ShieldOff, RefreshCw, Settings, Wifi, WifiOff, ChevronDown,
-  ChevronUp, Zap, Users, Clock, X,
+  AlertTriangle, ArrowUpCircle, ArrowDownCircle, Loader2,
+  Shield, ShieldOff, RefreshCw, Settings, ChevronDown,
+  ChevronUp, Users, Clock, X, Download, Upload, Wifi,
 } from 'lucide-react';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, LineChart, Line,
+} from 'recharts';
 import toast from 'react-hot-toast';
 import { bandwidthApi } from '../services/api';
 
+// ── Utilities ──────────────────────────────────────────────────
 const fmtBytes = (b) => {
   const n = Number(b) || 0;
   if (n <= 0) return '0 B';
@@ -16,7 +21,12 @@ const fmtBytes = (b) => {
   const i = Math.min(Math.floor(Math.log(n) / Math.log(k)), sizes.length - 1);
   return parseFloat((n / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
-const fmtMbps = (v) => (parseFloat(v) || 0).toFixed(2) + ' Mbps';
+const fmtGB = (b) => {
+  const n = Number(b) || 0;
+  if (n <= 0) return '0';
+  return (n / 1073741824).toFixed(2);
+};
+const fmtMbps = (v) => (parseFloat(v) || 0).toFixed(2);
 const fmtUptime = (s) => {
   if (!s) return '—';
   const d = Math.floor(s / 86400);
@@ -26,14 +36,26 @@ const fmtUptime = (s) => {
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m`;
 };
-const fmtDate = (d) => d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+const fmtTime = (t) => {
+  if (!t) return '';
+  return new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+};
 
+const RANGES = [
+  { key: '1h', label: 'Last 1 Hour' },
+  { key: '24h', label: 'Last 24 Hours' },
+  { key: '7d', label: 'Last 7 Days' },
+];
+
+// ── Main Dashboard ─────────────────────────────────────────────
 export default function BandwidthDashboard() {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
+  const [aggregate, setAggregate] = useState({ series: [], today_upload_bytes: 0, today_download_bytes: 0 });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [tab, setTab] = useState('all'); // all, online, flagged
+  const [tab, setTab] = useState('online');
+  const [range, setRange] = useState('1h');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState(null);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -41,32 +63,37 @@ export default function BandwidthDashboard() {
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  const fetchData = useCallback(async (silent = false) => {
+  const fetchAll = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const res = await bandwidthApi.getLive();
-      setUsers(res.data || []);
+      const [liveRes, aggRes] = await Promise.all([
+        bandwidthApi.getLive(),
+        bandwidthApi.getAggregate(range),
+      ]);
+      setUsers(liveRes.data || []);
+      setAggregate(aggRes.data || { series: [], today_upload_bytes: 0, today_download_bytes: 0 });
     } catch { /* ignore */ }
     setLoading(false);
     setRefreshing(false);
-  }, []);
+  }, [range]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // Auto-refresh every 15s for live updates
+  // Auto-refresh every 10s
   useEffect(() => {
-    const timer = setInterval(() => fetchData(true), 15000);
+    const timer = setInterval(() => fetchAll(true), 10000);
     return () => clearInterval(timer);
-  }, [fetchData]);
+  }, [fetchAll]);
+
+  // Re-fetch aggregate when range changes
+  useEffect(() => {
+    bandwidthApi.getAggregate(range).then(r => setAggregate(r.data || aggregate)).catch(() => {});
+  }, [range]);
 
   const fetchSettings = async () => {
-    try {
-      const res = await bandwidthApi.getSettings();
-      setSettings(res.data);
-    } catch {}
+    try { const res = await bandwidthApi.getSettings(); setSettings(res.data); } catch {}
   };
-
   const saveSettings = async () => {
     setSavingSettings(true);
     try {
@@ -76,114 +103,171 @@ export default function BandwidthDashboard() {
     } catch (err) { toast.error(err.message || 'Failed to save'); }
     setSavingSettings(false);
   };
-
   const handleThrottle = async (userId, username) => {
     if (!confirm(`Throttle user "${username}"? They will be disconnected and reconnect with reduced speeds.`)) return;
     try {
       await bandwidthApi.throttle(userId, 'Manual throttle by admin');
       toast.success(`${username} throttled`);
-      fetchData(true);
+      fetchAll(true);
     } catch (err) { toast.error(err.message || 'Failed'); }
   };
-
   const handleUnthrottle = async (userId, username) => {
     try {
       await bandwidthApi.unthrottle(userId);
       toast.success(`${username} restored`);
-      fetchData(true);
+      fetchAll(true);
     } catch (err) { toast.error(err.message || 'Failed'); }
   };
-
   const toggleExpand = async (userId) => {
-    if (expandedUser === userId) {
-      setExpandedUser(null);
-      return;
-    }
+    if (expandedUser === userId) { setExpandedUser(null); return; }
     setExpandedUser(userId);
     setHistoryLoading(true);
-    try {
-      const res = await bandwidthApi.getHistory(userId);
-      setHistory(res.data || []);
-    } catch { setHistory([]); }
+    try { const res = await bandwidthApi.getHistory(userId); setHistory(res.data || []); }
+    catch { setHistory([]); }
     setHistoryLoading(false);
   };
 
-  const filtered = tab === 'all' ? users
-    : tab === 'online' ? users.filter(u => u.is_online)
-    : users.filter(u => u.is_flagged);
+  const filtered = useMemo(() => {
+    if (tab === 'online') return users.filter(u => u.is_online);
+    if (tab === 'flagged') return users.filter(u => u.is_flagged);
+    return users;
+  }, [users, tab]);
 
-  const onlineCount = users.filter(u => u.is_online).length;
-  const flaggedCount = users.filter(u => u.is_flagged).length;
-  const topUploader = users.find(u => u.is_online && u.current_upload_mbps > 0);
+  const onlineCount = useMemo(() => users.filter(u => u.is_online).length, [users]);
+  const flaggedCount = useMemo(() => users.filter(u => u.is_flagged).length, [users]);
+  const currentDown = useMemo(() => users.reduce((s, u) => s + (u.is_online ? u.current_download_mbps : 0), 0), [users]);
+  const currentUp = useMemo(() => users.reduce((s, u) => s + (u.is_online ? u.current_upload_mbps : 0), 0), [users]);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64"><Loader2 size={32} className="animate-spin text-indigo-500" /></div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 size={32} className="animate-spin text-indigo-500" />
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
+    <div className="space-y-4">
+      {/* ── Header ───────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Bandwidth Control</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Live usage monitoring, abuse detection & throttling</p>
+          <h1 className="text-xl font-bold text-gray-900">Bandwidth Monitor</h1>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Real-time network usage &bull; Auto-refreshes every 10s
+            {refreshing && <Loader2 size={10} className="inline ml-1.5 animate-spin" />}
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => fetchData(true)} disabled={refreshing}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border rounded-lg hover:bg-gray-50">
+          <button onClick={() => fetchAll(true)} disabled={refreshing}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border rounded-lg hover:bg-gray-50 transition">
             <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} /> Refresh
           </button>
           <button onClick={() => { setSettingsOpen(true); fetchSettings(); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border rounded-lg hover:bg-gray-50">
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border rounded-lg hover:bg-gray-50 transition">
             <Settings size={13} /> Settings
           </button>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <SummaryCard icon={<Users size={20} />} label="Total Users" value={users.length} color="indigo" />
-        <SummaryCard icon={<Wifi size={20} />} label="Online Now" value={onlineCount} color="emerald" />
-        <SummaryCard icon={<AlertTriangle size={20} />} label="Flagged" value={flaggedCount} color="red" />
-        <SummaryCard icon={<Zap size={20} />} label="Top Upload" value={topUploader ? fmtMbps(topUploader.current_upload_mbps) : '—'} sub={topUploader?.username || ''} color="amber" />
+      {/* ── KPI Cards ────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <KpiCard icon={<Download size={18} />} label="Total Download Today"
+          value={`${fmtGB(aggregate.today_download_bytes)} GB`} color="blue" />
+        <KpiCard icon={<Upload size={18} />} label="Total Upload Today"
+          value={`${fmtGB(aggregate.today_upload_bytes)} GB`} color="purple" />
+        <KpiCard icon={<ArrowDownCircle size={18} />} label="Current Download"
+          value={`${currentDown.toFixed(1)} Mbps`} color="sky" />
+        <KpiCard icon={<ArrowUpCircle size={18} />} label="Current Upload"
+          value={`${currentUp.toFixed(1)} Mbps`} color="rose" />
+        <KpiCard icon={<Users size={18} />} label="Active Users"
+          value={onlineCount} sub={`${flaggedCount} flagged`} color="emerald" />
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
-        {[
-          { key: 'all', label: `All (${users.length})` },
-          { key: 'online', label: `Online (${onlineCount})` },
-          { key: 'flagged', label: `Flagged (${flaggedCount})` },
-        ].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${tab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-            {t.label}
-          </button>
-        ))}
+      {/* ── Aggregate Chart ──────────────────────────────────── */}
+      <div className="bg-white rounded-xl border shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-gray-800">Network Bandwidth</h2>
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+            {RANGES.map(r => (
+              <button key={r.key} onClick={() => setRange(r.key)}
+                className={`px-2.5 py-1 text-[10px] font-medium rounded-md transition-all ${
+                  range === r.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}>{r.label}</button>
+            ))}
+          </div>
+        </div>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={aggregate.series} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+              <defs>
+                <linearGradient id="gdDown" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gdUp" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="timestamp" tickFormatter={fmtTime} tick={{ fontSize: 10, fill: '#94a3b8' }}
+                axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false}
+                tickFormatter={v => `${v}`} unit=" Mbps" />
+              <Tooltip content={<ChartTooltip />} />
+              <Area type="monotone" dataKey="download" stroke="#3b82f6" strokeWidth={2}
+                fill="url(#gdDown)" name="Download" />
+              <Area type="monotone" dataKey="upload" stroke="#8b5cf6" strokeWidth={2}
+                fill="url(#gdUp)" name="Upload" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+        {aggregate.series.length === 0 && (
+          <p className="text-center text-xs text-gray-400 -mt-32 relative z-10">
+            Collecting data... Chart will populate after a few monitor cycles.
+          </p>
+        )}
       </div>
 
-      {/* Users Table */}
+      {/* ── Tabs + User Table ────────────────────────────────── */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+          {[
+            { key: 'all', label: `All (${users.length})` },
+            { key: 'online', label: `Online (${onlineCount})` },
+            { key: 'flagged', label: `Flagged (${flaggedCount})` },
+          ].map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                tab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}>{t.label}</button>
+          ))}
+        </div>
+        <p className="text-[10px] text-gray-400">{filtered.length} users</p>
+      </div>
+
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[10px] text-gray-500 uppercase tracking-wider border-b bg-gray-50/50">
-                <th className="px-4 py-3">User</th>
-                <th className="px-3 py-3">Plan</th>
-                <th className="px-3 py-3">Rate Limit</th>
-                <th className="px-3 py-3 text-right">↑ Upload</th>
-                <th className="px-3 py-3 text-right">↓ Download</th>
-                <th className="px-3 py-3 text-right">Total Used</th>
-                <th className="px-3 py-3 text-right">Session</th>
-                <th className="px-3 py-3">Status</th>
-                <th className="px-3 py-3 text-right">Actions</th>
+              <tr className="text-left text-[10px] text-gray-500 uppercase tracking-wider border-b bg-gray-50/60">
+                <th className="pl-4 pr-2 py-2.5 w-10">#</th>
+                <th className="px-3 py-2.5">Client</th>
+                <th className="px-3 py-2.5">Username</th>
+                <th className="px-3 py-2.5">Plan</th>
+                <th className="px-3 py-2.5 text-right">↑ Upload</th>
+                <th className="px-3 py-2.5 text-right">↓ Download</th>
+                <th className="px-3 py-2.5 text-right">Total (GB)</th>
+                <th className="px-3 py-2.5 text-right">Session</th>
+                <th className="px-3 py-2.5 text-center">Status</th>
+                <th className="px-3 py-2.5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-gray-100">
               {filtered.length === 0 ? (
-                <tr><td colSpan="9" className="px-4 py-12 text-center text-gray-400">No users in this view</td></tr>
-              ) : filtered.map(u => (
-                <UserRow key={u.id} user={u}
+                <tr><td colSpan="10" className="px-4 py-12 text-center text-gray-400">No users in this view</td></tr>
+              ) : filtered.map((u, idx) => (
+                <UserRow key={u.id} user={u} seq={idx + 1}
                   expanded={expandedUser === u.id}
                   onToggle={() => toggleExpand(u.id)}
                   onThrottle={() => handleThrottle(u.id, u.username)}
@@ -208,86 +292,108 @@ export default function BandwidthDashboard() {
   );
 }
 
-function SummaryCard({ icon, label, value, sub, color }) {
-  const colorMap = {
-    indigo: 'bg-indigo-50 text-indigo-600',
-    emerald: 'bg-emerald-50 text-emerald-600',
-    amber: 'bg-amber-50 text-amber-600',
-    red: 'bg-red-50 text-red-600',
-  };
+// ── Chart Tooltip ──────────────────────────────────────────────
+function ChartTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white rounded-2xl border p-4">
-      <div className={`p-2 rounded-lg w-fit ${colorMap[color]}`}>{icon}</div>
-      <p className="text-xl font-bold text-gray-900 mt-2">{value}</p>
-      {sub && <p className="text-[10px] text-gray-400 truncate">{sub}</p>}
-      <p className="text-[11px] font-medium text-gray-500 mt-0.5">{label}</p>
+    <div className="bg-gray-900 text-white rounded-lg px-3 py-2 text-xs shadow-xl">
+      <p className="text-gray-400 mb-1">{label ? fmtTime(label) : ''}</p>
+      {payload.map((p, i) => (
+        <p key={i} className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
+          {p.name}: <span className="font-semibold">{(p.value || 0).toFixed(2)} Mbps</span>
+        </p>
+      ))}
     </div>
   );
 }
 
-function UserRow({ user: u, expanded, onToggle, onThrottle, onUnthrottle, onNavigate, history, historyLoading }) {
-  const uploadHigh = u.current_upload_mbps > 1.5;
+// ── KPI Card ───────────────────────────────────────────────────
+const KpiCard = memo(function KpiCard({ icon, label, value, sub, color }) {
+  const colors = {
+    blue: 'from-blue-500 to-blue-600',
+    purple: 'from-purple-500 to-purple-600',
+    sky: 'from-sky-500 to-cyan-600',
+    rose: 'from-rose-500 to-pink-600',
+    emerald: 'from-emerald-500 to-teal-600',
+  };
+  const bgLight = {
+    blue: 'bg-blue-50 text-blue-600',
+    purple: 'bg-purple-50 text-purple-600',
+    sky: 'bg-sky-50 text-sky-600',
+    rose: 'bg-rose-50 text-rose-600',
+    emerald: 'bg-emerald-50 text-emerald-600',
+  };
+  return (
+    <div className="bg-white rounded-xl border p-3.5 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between">
+        <div className={`p-2 rounded-lg ${bgLight[color]}`}>{icon}</div>
+      </div>
+      <p className="text-lg font-bold text-gray-900 mt-2 leading-tight">{value}</p>
+      {sub && <p className="text-[10px] text-gray-400">{sub}</p>}
+      <p className="text-[10px] font-medium text-gray-500 mt-0.5">{label}</p>
+    </div>
+  );
+});
+
+// ── User Row ───────────────────────────────────────────────────
+const UserRow = memo(function UserRow({ user: u, seq, expanded, onToggle, onThrottle, onUnthrottle, onNavigate, history, historyLoading }) {
+  const uploadColor = u.current_upload_mbps > 1.5 ? 'text-red-600 font-bold' :
+    u.current_upload_mbps < 1 ? 'text-emerald-600' : 'text-amber-600';
+  const totalGB = ((Number(u.upload_bytes) + Number(u.download_bytes)) / 1073741824).toFixed(2);
 
   return (
     <>
-      <tr className={`hover:bg-gray-50/50 ${u.is_flagged ? 'bg-red-50/30' : ''}`}>
-        <td className="px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <div className={`w-2 h-2 rounded-full shrink-0 ${u.is_online ? 'bg-emerald-500' : 'bg-gray-300'}`} />
-            <div className="min-w-0">
-              <button onClick={onNavigate} className="text-sm font-medium text-gray-900 hover:text-indigo-600 truncate block">{u.full_name || u.username}</button>
-              <p className="text-[10px] text-gray-400 truncate">{u.username}</p>
-            </div>
+      <tr className={`hover:bg-gray-50/70 transition-colors ${u.is_flagged ? 'bg-red-50/40' : ''}`}>
+        <td className="pl-4 pr-2 py-2.5 text-[10px] text-gray-400 font-mono">{seq}</td>
+        <td className="px-3 py-2.5">
+          <button onClick={onNavigate} className="text-sm font-medium text-gray-900 hover:text-indigo-600 truncate block max-w-[140px]">
+            {u.full_name || u.username}
+          </button>
+        </td>
+        <td className="px-3 py-2.5">
+          <div className="flex items-center gap-1.5">
+            <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${u.is_online ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+            <span className="text-xs text-gray-500 font-mono truncate max-w-[100px]">{u.username}</span>
           </div>
         </td>
-        <td className="px-3 py-3 text-xs text-gray-600">{u.plan_name || '—'}</td>
-        <td className="px-3 py-3">
-          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${u.is_flagged ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
-            {u.rate_limit}
-          </span>
-        </td>
-        <td className={`px-3 py-3 text-right text-xs font-semibold ${uploadHigh ? 'text-red-600' : 'text-gray-700'}`}>
+        <td className="px-3 py-2.5 text-xs text-gray-600">{u.plan_name || '—'}</td>
+        <td className={`px-3 py-2.5 text-right text-xs ${u.is_online ? uploadColor : 'text-gray-300'}`}>
           {u.is_online ? fmtMbps(u.current_upload_mbps) : '—'}
         </td>
-        <td className="px-3 py-3 text-right text-xs text-gray-600">
+        <td className="px-3 py-2.5 text-right text-xs text-blue-600">
           {u.is_online ? fmtMbps(u.current_download_mbps) : '—'}
         </td>
-        <td className="px-3 py-3 text-right text-[10px] text-gray-500">
-          {u.is_online ? (
-            <div>
-              <span className="text-red-500">↑{fmtBytes(u.upload_bytes)}</span>
-              {' '}
-              <span className="text-blue-500">↓{fmtBytes(u.download_bytes)}</span>
-            </div>
-          ) : '—'}
+        <td className="px-3 py-2.5 text-right text-xs text-gray-600">
+          {u.is_online ? totalGB : '—'}
         </td>
-        <td className="px-3 py-3 text-right text-[11px] text-gray-500">
+        <td className="px-3 py-2.5 text-right text-[11px] text-gray-500">
           {u.is_online ? (
             <span className="flex items-center gap-1 justify-end"><Clock size={10} />{fmtUptime(u.session_seconds)}</span>
           ) : '—'}
         </td>
-        <td className="px-3 py-3">
+        <td className="px-3 py-2.5 text-center">
           {u.is_flagged ? (
-            <span className="inline-flex items-center gap-1 text-[9px] font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1 text-[9px] font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded-full whitespace-nowrap">
               <AlertTriangle size={9} /> Throttled
             </span>
           ) : u.is_online ? (
             <span className="text-[9px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">Normal</span>
           ) : (
-            <span className="text-[9px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Offline</span>
+            <span className="text-[9px] font-bold bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">Offline</span>
           )}
         </td>
-        <td className="px-3 py-3 text-right">
-          <div className="flex items-center gap-1 justify-end">
+        <td className="px-3 py-2.5 text-right">
+          <div className="flex items-center gap-0.5 justify-end">
             {u.is_flagged ? (
-              <button onClick={onUnthrottle} title="Restore"
-                className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50"><ShieldOff size={14} /></button>
+              <button onClick={onUnthrottle} title="Restore speed"
+                className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition"><ShieldOff size={14} /></button>
             ) : u.is_online ? (
-              <button onClick={onThrottle} title="Throttle"
-                className="p-1.5 rounded-lg text-red-500 hover:bg-red-50"><Shield size={14} /></button>
+              <button onClick={onThrottle} title="Throttle user"
+                className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition"><Shield size={14} /></button>
             ) : null}
-            <button onClick={onToggle} title="Usage history"
-              className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100">
+            <button onClick={onToggle} title="Usage chart"
+              className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition">
               {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
           </div>
@@ -295,35 +401,75 @@ function UserRow({ user: u, expanded, onToggle, onThrottle, onUnthrottle, onNavi
       </tr>
       {expanded && (
         <tr>
-          <td colSpan="9" className="px-4 py-3 bg-gray-50/50">
-            {historyLoading ? (
-              <div className="flex justify-center py-4"><Loader2 size={16} className="animate-spin text-gray-400" /></div>
-            ) : history.length > 0 ? (
-              <div className="space-y-2">
-                <p className="text-[10px] font-semibold text-gray-500 uppercase">Recent Usage Samples (last 24h)</p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-                  {history.slice(0, 20).map((h, i) => (
-                    <div key={i} className="bg-white border rounded-lg p-2">
-                      <p className="text-gray-400">{fmtDate(h.sampled_at)}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="flex items-center gap-0.5 text-red-500"><ArrowUpCircle size={10} />{fmtMbps(h.upload_rate)}</span>
-                        <span className="flex items-center gap-0.5 text-blue-500"><ArrowDownCircle size={10} />{fmtMbps(h.download_rate)}</span>
-                      </div>
-                      <p className="text-gray-300 mt-0.5">↑{fmtBytes(h.upload_bytes)} ↓{fmtBytes(h.download_bytes)}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400 text-center py-4">No usage data recorded yet</p>
-            )}
+          <td colSpan="10" className="p-0">
+            <ExpandedRow history={history} loading={historyLoading} username={u.username} />
           </td>
         </tr>
       )}
     </>
   );
+});
+
+// ── Expanded Row with Mini Chart ───────────────────────────────
+function ExpandedRow({ history, loading, username }) {
+  if (loading) {
+    return <div className="flex justify-center py-6 bg-gray-50/60"><Loader2 size={16} className="animate-spin text-gray-400" /></div>;
+  }
+  if (!history.length) {
+    return <div className="py-6 text-center text-xs text-gray-400 bg-gray-50/60">No usage data recorded yet for {username}</div>;
+  }
+
+  const chartData = [...history].reverse().slice(-30).map(h => ({
+    time: fmtTime(h.sampled_at),
+    upload: parseFloat(h.upload_rate) || 0,
+    download: parseFloat(h.download_rate) || 0,
+  }));
+
+  return (
+    <div className="bg-gray-50/60 border-t px-4 py-3">
+      <p className="text-[10px] font-semibold text-gray-500 uppercase mb-2">
+        {username} &mdash; Upload vs Download (last 30 samples)
+      </p>
+      <div className="h-36 bg-white rounded-lg border p-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
+            <defs>
+              <linearGradient id={`muD-${username}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id={`muU-${username}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+            <XAxis dataKey="time" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+            <Tooltip content={<MiniTooltip />} />
+            <Area type="monotone" dataKey="download" stroke="#3b82f6" strokeWidth={1.5}
+              fill={`url(#muD-${username})`} name="Download" />
+            <Area type="monotone" dataKey="upload" stroke="#ef4444" strokeWidth={1.5}
+              fill={`url(#muU-${username})`} name="Upload" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
 }
 
+function MiniTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-gray-900 text-white rounded px-2 py-1.5 text-[10px] shadow-lg">
+      {payload.map((p, i) => (
+        <p key={i}><span style={{ color: p.color }}>{p.name}</span>: {(p.value || 0).toFixed(2)} Mbps</p>
+      ))}
+    </div>
+  );
+}
+
+// ── Settings Modal ─────────────────────────────────────────────
 function SettingsModal({ settings, setSettings, onSave, saving, onClose }) {
   const update = (key, value) => setSettings(prev => ({ ...prev, [key]: value }));
 

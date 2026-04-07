@@ -553,6 +553,17 @@ CREATE INDEX IF NOT EXISTS idx_bw_log_sampled ON bandwidth_usage_log(sampled_at)
 -- ============================================================
 -- BANDWIDTH SETTINGS — per-company configuration
 -- ============================================================
+CREATE TABLE IF NOT EXISTS bandwidth_aggregate_log (
+  id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  company_id            UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  total_upload_mbps     NUMERIC(10, 2) DEFAULT 0,
+  total_download_mbps   NUMERIC(10, 2) DEFAULT 0,
+  active_users          INTEGER DEFAULT 0,
+  sampled_at            TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_bw_agg_company_time ON bandwidth_aggregate_log(company_id, sampled_at DESC);
+
+-- ============================================================
 CREATE TABLE IF NOT EXISTS bandwidth_settings (
   id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   company_id            UUID UNIQUE NOT NULL REFERENCES companies(id) ON DELETE CASCADE,

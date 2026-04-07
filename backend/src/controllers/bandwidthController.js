@@ -93,6 +93,57 @@ const getLiveUsage = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// GET /bandwidth/aggregate — Aggregate bandwidth time-series for charts
+const getAggregate = async (req, res, next) => {
+  try {
+    const companyId = req.companyId;
+    const range = req.query.range || '1h'; // 1h, 24h, 7d
+
+    let interval;
+    switch (range) {
+      case '7d': interval = '7 days'; break;
+      case '24h': interval = '24 hours'; break;
+      case '1h':
+      default: interval = '1 hour'; break;
+    }
+
+    const result = await pool.query(
+      `SELECT total_upload_mbps AS upload, total_download_mbps AS download,
+              active_users, sampled_at AS timestamp
+       FROM bandwidth_aggregate_log
+       WHERE company_id = $1 AND sampled_at >= NOW() - INTERVAL '${interval}'
+       ORDER BY sampled_at ASC`,
+      [companyId]
+    );
+
+    // Also get today's totals from bandwidth_usage_log
+    const totalsRes = await pool.query(
+      `SELECT
+        COALESCE(SUM(upload_bytes), 0) AS total_upload_bytes,
+        COALESCE(SUM(download_bytes), 0) AS total_download_bytes
+       FROM bandwidth_usage_log
+       WHERE company_id = $1 AND sampled_at >= CURRENT_DATE`,
+      [companyId]
+    );
+
+    const totals = totalsRes.rows[0] || {};
+
+    res.json({
+      success: true,
+      data: {
+        series: result.rows.map(r => ({
+          timestamp: r.timestamp,
+          download: parseFloat(r.download) || 0,
+          upload: parseFloat(r.upload) || 0,
+          active_users: r.active_users || 0,
+        })),
+        today_upload_bytes: parseInt(totals.total_upload_bytes) || 0,
+        today_download_bytes: parseInt(totals.total_download_bytes) || 0,
+      },
+    });
+  } catch (err) { next(err); }
+};
+
 // GET /bandwidth/flagged — Only flagged/throttled users
 const getFlaggedUsers = async (req, res, next) => {
   try {
@@ -190,6 +241,7 @@ const getTopUploaders = async (req, res, next) => {
 
 module.exports = {
   getLiveUsage,
+  getAggregate,
   getFlaggedUsers,
   throttleUser,
   unthrottleUser,
