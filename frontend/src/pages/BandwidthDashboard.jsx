@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, memo, useMemo, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, memo, useMemo, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle, ArrowUpCircle, ArrowDownCircle, Loader2,
@@ -183,7 +183,10 @@ export default function BandwidthDashboard() {
           value={onlineCount} sub={`${flaggedCount} flagged`} color="emerald" />
       </div>
 
-      {/* ── Aggregate Chart ──────────────────────────────────── */}
+      {/* ── Live Marquee Chart ────────────────────────────────── */}
+      <AggregateLiveChart uploadMbps={currentUp} downloadMbps={currentDown} />
+
+      {/* ── Historical Chart ───────────────────────────────────── */}
       <div className="bg-white rounded-xl border shadow-sm p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-gray-800">Network Bandwidth</h2>
@@ -546,6 +549,236 @@ function Field({ label, sub, children }) {
       <label className="text-xs font-semibold text-gray-700">{label}</label>
       {sub && <p className="text-[10px] text-gray-400 mb-1">{sub}</p>}
       {children}
+    </div>
+  );
+}
+
+// ── Aggregate Live Marquee Chart ───────────────────────────────
+const AGG_H = 280;
+const AGG_PAD = { top: 20, right: 16, bottom: 40, left: 72 };
+const AGG_DURATIONS = [
+  { ms: 60000, label: '1 min' },
+  { ms: 120000, label: '2 min' },
+  { ms: 300000, label: '5 min' },
+];
+
+function aggFmtBps(mbps) {
+  if (!mbps || mbps <= 0) return '0 Mbps';
+  if (mbps >= 1000) return (mbps / 1000).toFixed(2) + ' Gbps';
+  return mbps.toFixed(2) + ' Mbps';
+}
+function aggFmtTime(ts) {
+  return new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+function aggNiceMax(val) {
+  if (val <= 0) return 1;
+  const exp = Math.pow(10, Math.floor(Math.log10(val)));
+  return Math.ceil(val / exp) * exp;
+}
+
+function AggregateLiveChart({ uploadMbps, downloadMbps }) {
+  const canvasRef = useRef(null);
+  const containerRef = useRef(null);
+  const dataRef = useRef([]);
+  const durationRef = useRef(120000);
+  const animRef = useRef(null);
+  const [duration, setDuration] = useState(120000);
+  const [rates, setRates] = useState({ upload: 0, download: 0 });
+
+  durationRef.current = duration;
+
+  // Push new data point whenever rates change
+  useEffect(() => {
+    const now = Date.now();
+    const up = Number(uploadMbps) || 0;
+    const down = Number(downloadMbps) || 0;
+    if (up > 0 || down > 0) {
+      dataRef.current.push({ time: now, upload: up, download: down });
+      const cutoff = now - 600000;
+      dataRef.current = dataRef.current.filter(p => p.time > cutoff);
+    }
+    setRates({ upload: up, download: down });
+  }, [uploadMbps, downloadMbps]);
+
+  // Pre-seed with zeros
+  useEffect(() => {
+    const now = Date.now();
+    const seed = [];
+    for (let t = now - 600000; t <= now; t += 10000) {
+      seed.push({ time: t, upload: 0, download: 0 });
+    }
+    dataRef.current = seed;
+  }, []);
+
+  // Canvas draw loop
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    const draw = () => {
+      const container = containerRef.current;
+      if (!container) { animRef.current = requestAnimationFrame(draw); return; }
+
+      const rect = container.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const w = rect.width;
+      const h = AGG_H;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const cw = w - AGG_PAD.left - AGG_PAD.right;
+      const ch = h - AGG_PAD.top - AGG_PAD.bottom;
+      ctx.clearRect(0, 0, w, h);
+
+      const now = Date.now();
+      const dur = durationRef.current;
+      const tStart = now - dur;
+      const tEnd = now;
+      const pts = dataRef.current.filter(p => p.time >= tStart && p.time <= tEnd);
+
+      let maxVal = 0;
+      pts.forEach(p => { maxVal = Math.max(maxVal, p.upload, p.download); });
+      maxVal = aggNiceMax(maxVal);
+
+      // Horizontal grid
+      ctx.strokeStyle = '#f0f0f0';
+      ctx.lineWidth = 1;
+      const gridRows = 5;
+      for (let i = 0; i <= gridRows; i++) {
+        const y = AGG_PAD.top + (ch / gridRows) * i;
+        ctx.beginPath();
+        ctx.moveTo(AGG_PAD.left, y);
+        ctx.lineTo(AGG_PAD.left + cw, y);
+        ctx.stroke();
+      }
+
+      // Vertical grid
+      const tickInterval = dur <= 60000 ? 10000 : dur <= 120000 ? 20000 : 30000;
+      const firstTick = Math.ceil(tStart / tickInterval) * tickInterval;
+      ctx.strokeStyle = '#f5f5f5';
+      for (let t = firstTick; t <= tEnd; t += tickInterval) {
+        const x = AGG_PAD.left + ((t - tStart) / (tEnd - tStart)) * cw;
+        ctx.beginPath();
+        ctx.moveTo(x, AGG_PAD.top);
+        ctx.lineTo(x, AGG_PAD.top + ch);
+        ctx.stroke();
+      }
+
+      // Y-axis labels
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '10px system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      for (let i = 0; i <= gridRows; i++) {
+        const y = AGG_PAD.top + (ch / gridRows) * i;
+        const val = maxVal * (1 - i / gridRows);
+        ctx.fillText(aggFmtBps(val), AGG_PAD.left - 8, y);
+      }
+
+      // X-axis labels
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      for (let t = firstTick; t <= tEnd; t += tickInterval) {
+        const x = AGG_PAD.left + ((t - tStart) / (tEnd - tStart)) * cw;
+        ctx.fillText(aggFmtTime(t), x, AGG_PAD.top + ch + 6);
+      }
+
+      // Draw filled area with smooth bezier
+      function drawArea(data, key, strokeColor, fillColor) {
+        if (data.length < 2) return;
+        const toX = (t) => AGG_PAD.left + ((t - tStart) / (tEnd - tStart)) * cw;
+        const toY = (v) => AGG_PAD.top + ch - (v / maxVal) * ch;
+
+        ctx.beginPath();
+        ctx.moveTo(toX(data[0].time), AGG_PAD.top + ch);
+        for (let i = 0; i < data.length; i++) {
+          const x = toX(data[i].time);
+          const y = toY(data[i][key]);
+          if (i === 0) ctx.lineTo(x, y);
+          else {
+            const prev = data[i - 1];
+            const px = toX(prev.time);
+            const py = toY(prev[key]);
+            const cpx = (px + x) / 2;
+            ctx.bezierCurveTo(cpx, py, cpx, y, x, y);
+          }
+        }
+        ctx.lineTo(toX(data[data.length - 1].time), AGG_PAD.top + ch);
+        ctx.closePath();
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+
+        ctx.beginPath();
+        for (let i = 0; i < data.length; i++) {
+          const x = toX(data[i].time);
+          const y = toY(data[i][key]);
+          if (i === 0) ctx.moveTo(x, y);
+          else {
+            const prev = data[i - 1];
+            const px = toX(prev.time);
+            const py = toY(prev[key]);
+            const cpx = (px + x) / 2;
+            ctx.bezierCurveTo(cpx, py, cpx, y, x, y);
+          }
+        }
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      drawArea(pts, 'upload', '#c084fc', 'rgba(192,132,252,0.2)');
+      drawArea(pts, 'download', '#60a5fa', 'rgba(96,165,250,0.2)');
+
+      // Axes
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(AGG_PAD.left, AGG_PAD.top);
+      ctx.lineTo(AGG_PAD.left, AGG_PAD.top + ch);
+      ctx.lineTo(AGG_PAD.left + cw, AGG_PAD.top + ch);
+      ctx.stroke();
+
+      animRef.current = requestAnimationFrame(draw);
+    };
+
+    animRef.current = requestAnimationFrame(draw);
+    return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
+  }, []);
+
+  return (
+    <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+      <div className="px-4 py-3 border-b bg-gray-50/60 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Wifi size={16} className="text-blue-500" />
+          <h4 className="text-[13px] font-semibold text-gray-800">Live Network Bandwidth</h4>
+        </div>
+        <select value={duration} onChange={e => setDuration(Number(e.target.value))}
+          className="h-[30px] px-2 text-xs border border-gray-300 rounded bg-white text-gray-700 outline-none focus:border-blue-400 cursor-pointer">
+          {AGG_DURATIONS.map(opt => (
+            <option key={opt.ms} value={opt.ms}>{opt.label}</option>
+          ))}
+        </select>
+      </div>
+      <div className="relative" ref={containerRef} style={{ height: AGG_H }}>
+        <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
+      </div>
+      <div className="border-t py-2.5 text-center">
+        <div className="flex items-center justify-center gap-5 mb-1">
+          <span className="flex items-center gap-1.5 text-xs text-gray-500">
+            <span className="w-3 h-2 rounded-sm inline-block" style={{ backgroundColor: '#c084fc' }} /> Upload
+          </span>
+          <span className="flex items-center gap-1.5 text-xs text-gray-500">
+            <span className="w-3 h-2 rounded-sm inline-block" style={{ backgroundColor: '#60a5fa' }} /> Download
+          </span>
+        </div>
+        <p className="text-sm font-bold text-gray-700">
+          {aggFmtBps(rates.upload)} / {aggFmtBps(rates.download)}
+        </p>
+      </div>
     </div>
   );
 }

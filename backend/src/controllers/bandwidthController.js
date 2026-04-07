@@ -116,13 +116,28 @@ const getAggregate = async (req, res, next) => {
       [companyId]
     );
 
-    // Also get today's totals from bandwidth_usage_log
+    // Today's totals: delta between first and last snapshot today per user
+    // (bytes are cumulative MikroTik session counters, so we need last - first)
     const totalsRes = await pool.query(
-      `SELECT
-        COALESCE(SUM(upload_bytes), 0) AS total_upload_bytes,
-        COALESCE(SUM(download_bytes), 0) AS total_download_bytes
-       FROM bandwidth_usage_log
-       WHERE company_id = $1 AND sampled_at >= CURRENT_DATE`,
+      `WITH first_snap AS (
+         SELECT DISTINCT ON (user_id) user_id,
+           upload_bytes AS ub, download_bytes AS db
+         FROM bandwidth_usage_log
+         WHERE company_id = $1 AND sampled_at >= CURRENT_DATE
+         ORDER BY user_id, sampled_at ASC
+       ),
+       last_snap AS (
+         SELECT DISTINCT ON (user_id) user_id,
+           upload_bytes AS ub, download_bytes AS db
+         FROM bandwidth_usage_log
+         WHERE company_id = $1 AND sampled_at >= CURRENT_DATE
+         ORDER BY user_id, sampled_at DESC
+       )
+       SELECT
+         COALESCE(SUM(GREATEST(l.ub - f.ub, 0)), 0) AS total_upload_bytes,
+         COALESCE(SUM(GREATEST(l.db - f.db, 0)), 0) AS total_download_bytes
+       FROM last_snap l
+       JOIN first_snap f ON l.user_id = f.user_id`,
       [companyId]
     );
 
