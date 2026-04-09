@@ -3,6 +3,7 @@ const radiusDb = require('../config/radiusDb');
 const { ApiError } = require('../middleware/errorHandler');
 const { encrypt, decrypt } = require('../utils/encryption');
 const { createMikroTikClient } = require('../services/mikrotik');
+const radiusService = require('../services/radiusService');
 
 // Profiles/usernames to exclude from sync (system accounts, not real customers)
 const EXCLUDED_PROFILES = ['vpn'];
@@ -91,8 +92,39 @@ const backgroundSync = async (companyId, adminId = null) => {
       finally { client.release(); }
     }
     console.log(`[SYNC] Auto-imported ${imported} customers from RADIUS DB (${skipped} skipped) for company ${companyId}`);
+
+    // Also sync all routers to RADIUS NAS table for multi-router auth
+    await syncAllNas(companyId);
   } catch (err) {
     console.warn(`[SYNC] Background sync failed: ${err.message}`);
+  }
+};
+
+/**
+ * Sync all company routers to RADIUS NAS table (for multi-router auth)
+ */
+const syncAllNas = async (companyId) => {
+  try {
+    const routersRes = await pool.query(
+      'SELECT id, name, ip_address, password_enc FROM routers WHERE company_id = $1 AND active = TRUE',
+      [companyId]
+    );
+    for (const router of routersRes.rows) {
+      try {
+        const pwd = router.password_enc ? decrypt(router.password_enc) : 'secret';
+        await radiusService.upsertNas(
+          router.ip_address,
+          pwd,
+          router.name,
+          `Router ${router.name} for company ${companyId}`
+        );
+        console.log(`[NAS-SYNC] Registered ${router.ip_address} (${router.name})`);
+      } catch (err) {
+        console.warn(`[NAS-SYNC] Failed ${router.ip_address}: ${err.message}`);
+      }
+    }
+  } catch (err) {
+    console.warn(`[NAS-SYNC] syncAllNas failed: ${err.message}`);
   }
 };
 
@@ -121,6 +153,18 @@ const addRouter = async (req, res, next) => {
     );
 
     res.status(201).json({ success: true, data: result.rows[0] });
+
+    // Register router IP in RADIUS NAS table (required for multi-router auth)
+    try {
+      await radiusService.upsertNas(
+        ip_address,
+        password || 'secret', // Use same password as NAS secret
+        name,
+        `Router ${name} for company ${companyId}`
+      );
+    } catch (nasErr) {
+      console.warn(`[ROUTERS] Failed to register NAS for ${ip_address}: ${nasErr.message}`);
+    }
 
     // Auto-sync customers from RADIUS DB in background (pass admin who added the router)
     backgroundSync(companyId, req.adminId).catch(() => {});
@@ -191,6 +235,20 @@ const updateRouter = async (req, res, next) => {
     );
 
     res.json({ success: true, data: result.rows[0] });
+
+    // Update NAS entry if IP changed
+    if (ip_address && password) {
+      try {
+        await radiusService.upsertNas(
+          ip_address,
+          password,
+          name || result.rows[0].name,
+          `Router ${name || result.rows[0].name} for company ${companyId}`
+        );
+      } catch (nasErr) {
+        console.warn(`[ROUTERS] Failed to update NAS for ${ip_address}: ${nasErr.message}`);
+      }
+    }
   } catch (err) {
     next(err);
   }
@@ -265,4 +323,4 @@ const testRouterConnection = async (req, res, next) => {
   }
 };
 
-module.exports = { addRouter, getRouters, updateRouter, deleteRouter, testRouterConnection };
+module.exports = { addRouter, getRouters, updateRouter, deleteRouter, testRouterConnection, syncAllNas };
