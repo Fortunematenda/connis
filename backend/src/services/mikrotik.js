@@ -269,6 +269,7 @@ const withConnection = async (callback, routerConfig) => {
 // Periodic cleanup of idle connections
 setInterval(() => {
   const now = Date.now();
+  const POOL_TIMEOUT = 30000; // 30s max connection life
   for (const [key, pool] of connectionPools.entries()) {
     if (!pool.inUse && (now - pool.lastUsed > 60000 || now - pool.created > POOL_TIMEOUT)) {
       try { pool.client.close(); } catch {}
