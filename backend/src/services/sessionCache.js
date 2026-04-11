@@ -69,13 +69,19 @@ const refreshSessions = async (companyId, routerConfig) => {
   let routerOnline = false;
   let fetchSuccess = false;
 
-  // Source 1: MikroTik active PPP sessions (primary)
-  if (routerConfig) {
+  // Support both single routerConfig and array of configs
+  const configs = Array.isArray(routerConfig) ? routerConfig : (routerConfig ? [routerConfig] : []);
+
+  // Source 1: MikroTik active PPP sessions from ALL routers
+  const seenUsernames = new Set();
+  for (const cfg of configs) {
     try {
-      const raw = await getActiveSessions(routerConfig);
+      const raw = await getActiveSessions(cfg);
       routerOnline = true;
       fetchSuccess = true;
       for (const s of raw) {
+        if (seenUsernames.has(s.name)) continue; // avoid duplicates
+        seenUsernames.add(s.name);
         sessions.push({
           username: s.name,
           ip: s.address || '',
@@ -83,10 +89,11 @@ const refreshSessions = async (companyId, routerConfig) => {
           callerId: s['caller-id'] || '',
           service: s.service || '',
           source: 'mikrotik',
+          router: cfg.name || cfg.host,
         });
       }
     } catch (err) {
-      console.warn(`[SESSION-CACHE] MikroTik fetch failed: ${err.message}`);
+      console.warn(`[SESSION-CACHE] MikroTik fetch failed for ${cfg.name || cfg.host}: ${err.message}`);
     }
   }
 

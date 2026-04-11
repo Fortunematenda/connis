@@ -1,6 +1,6 @@
 const pool = require('../config/db');
 const { ApiError } = require('../middleware/errorHandler');
-const { getRouterConfigForCompany } = require('../services/routerResolver');
+const { getRouterConfigForCompany, getAllRouterConfigsForCompany } = require('../services/routerResolver');
 const sessionCache = require('../services/sessionCache');
 
 // POST /users/create — Register a new ISP subscriber
@@ -102,10 +102,10 @@ const getUsersStatus = async (req, res, next) => {
     const users = usersResult.rows;
 
     // 2. Get cached sessions (refreshes from MikroTik/RADIUS every 30s, not per request)
-    const routerConfig = await getRouterConfigForCompany(companyId);
+    const routerConfigs = await getAllRouterConfigsForCompany(companyId);
     const cached = forceRefresh
-      ? await sessionCache.forceRefresh(companyId, routerConfig)
-      : await sessionCache.getSessions(companyId, routerConfig);
+      ? await sessionCache.forceRefresh(companyId, routerConfigs)
+      : await sessionCache.getSessions(companyId, routerConfigs);
 
     // 3. Merge users with cached session data
     const merged = users.map((user) => {
