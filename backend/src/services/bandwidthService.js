@@ -137,6 +137,10 @@ const getUsageFromMikrotik = async (usernames, companyId) => {
       } catch (err) {
         console.warn(`[BW-SERVICE] MikroTik fetch failed for ${routerConfig.name || routerConfig.host}: ${err.message}`);
       }
+      // Small delay between routers to prevent API overload
+      if (routerConfigs.indexOf(routerConfig) < routerConfigs.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
     }
   } catch (err) {
     console.warn(`[BW-SERVICE] MikroTik usage fetch failed: ${err.message}`);

@@ -72,7 +72,7 @@ const refreshSessions = async (companyId, routerConfig) => {
   // Support both single routerConfig and array of configs
   const configs = Array.isArray(routerConfig) ? routerConfig : (routerConfig ? [routerConfig] : []);
 
-  // Source 1: MikroTik active PPP sessions from ALL routers
+  // Source 1: MikroTik active PPP sessions from ALL routers (sequential)
   const seenUsernames = new Set();
   for (const cfg of configs) {
     try {
@@ -91,6 +91,10 @@ const refreshSessions = async (companyId, routerConfig) => {
           source: 'mikrotik',
           router: cfg.name || cfg.host,
         });
+      }
+      // Small delay between routers to prevent API overload
+      if (configs.indexOf(cfg) < configs.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
     } catch (err) {
       console.warn(`[SESSION-CACHE] MikroTik fetch failed for ${cfg.name || cfg.host}: ${err.message}`);
