@@ -59,7 +59,7 @@ const monitorCompany = async (companyId) => {
 
   // Get active users for this company
   const usersRes = await pool.query(
-    `SELECT u.id, u.username, u.radius_username, u.is_flagged, u.flagged_at
+    `SELECT u.id, u.username, u.is_flagged, u.flagged_at
      FROM users u
      WHERE u.company_id = $1 AND u.active = TRUE`,
     [companyId]
@@ -67,8 +67,8 @@ const monitorCompany = async (companyId) => {
 
   if (usersRes.rows.length === 0) return;
 
-  const usernames = usersRes.rows.map(u => u.radius_username || u.username);
-  const userMap = new Map(usersRes.rows.map(u => [u.radius_username || u.username, u]));
+  const usernames = usersRes.rows.map(u => u.username);
+  const userMap = new Map(usersRes.rows.map(u => [u.username, u]));
 
   // Fetch current traffic (MikroTik API first, radacct fallback)
   const currentUsage = await bandwidthService.getUsage(usernames, companyId);

@@ -32,27 +32,4 @@ const getRouterConfigForCompany = async (companyId) => {
   return { host: r.ip_address, user: r.username, password: decrypt(r.password_enc), port: r.port, authType: r.auth_type || 'radius' };
 };
 
-// Get ALL active router configs for a company (for multi-router support)
-const getAllRouterConfigsForCompany = async (companyId) => {
-  if (!companyId) return [];
-
-  const result = await pool.query(
-    `SELECT ip_address, username, password_enc, port, auth_type, name, is_default
-     FROM routers
-     WHERE company_id = $1 AND active = TRUE
-     ORDER BY is_default DESC, created_at ASC`,
-    [companyId]
-  );
-
-  return result.rows.map(r => ({
-    host: r.ip_address,
-    user: r.username,
-    password: decrypt(r.password_enc),
-    port: r.port,
-    authType: r.auth_type || 'radius',
-    name: r.name,
-    isDefault: r.is_default,
-  }));
-};
-
-module.exports = { getRouterConfigForCompany, getAllRouterConfigsForCompany };
+module.exports = { getRouterConfigForCompany };

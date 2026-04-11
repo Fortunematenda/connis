@@ -11,7 +11,7 @@ const pool = require('../config/db');
 const radiusDb = require('../config/radiusDb');
 const radiusService = require('./radiusService');
 const mikrotik = require('./mikrotik');
-const { getRouterConfigForCompany, getAllRouterConfigsForCompany } = require('./routerResolver');
+const { getRouterConfigForCompany } = require('./routerResolver');
 
 // ── Rate Limit Generation ───────────────────────────────────
 
@@ -47,101 +47,91 @@ const generateRateLimit = (user, plan) => {
 const getUsageFromMikrotik = async (usernames, companyId) => {
   const usageMap = new Map();
   try {
-    const routerConfigs = await getAllRouterConfigsForCompany(companyId);
-    if (!routerConfigs || routerConfigs.length === 0) {
-      console.warn(`[BW-SERVICE] No router configs for company ${companyId}`);
+    const routerConfig = await getRouterConfigForCompany(companyId);
+    if (!routerConfig) {
+      console.warn(`[BW-SERVICE] No router config for company ${companyId}`);
       return usageMap;
     }
 
     const { withConnection } = require('./mikrotik');
-    for (const routerConfig of routerConfigs) {
-      try {
-        await withConnection(async (client) => {
-          // 1. Get active PPP sessions
-          const sessions = await client.talk(['/ppp/active/print']);
-          console.log(`[BW-SERVICE] Found ${sessions.length} active PPP sessions on ${routerConfig.name || routerConfig.host}`);
-          if (sessions.length === 0) return;
+    await withConnection(async (client) => {
+      // 1. Get active PPP sessions
+      const sessions = await client.talk(['/ppp/active/print']);
+      console.log(`[BW-SERVICE] Found ${sessions.length} active PPP sessions`);
+      if (sessions.length === 0) return;
 
-          // Build session map: username -> uptime
-          const sessionMap = new Map();
-          for (const s of sessions) {
-            if (usernames.length > 0 && !usernames.includes(s.name)) continue;
-            sessionMap.set(s.name, s.uptime || '');
-          }
+      // Build session map: username → uptime
+      const sessionMap = new Map();
+      for (const s of sessions) {
+        if (usernames.length > 0 && !usernames.includes(s.name)) continue;
+        sessionMap.set(s.name, s.uptime || '');
+      }
 
-          // 2. Get ALL interfaces in one call (much faster than per-user queries)
-          const allIfaces = await client.talk(['/interface/print']);
-          console.log(`[BW-SERVICE] Fetched ${allIfaces.length} interfaces total`);
+      // 2. Get ALL interfaces in one call (much faster than per-user queries)
+      const allIfaces = await client.talk(['/interface/print']);
+      console.log(`[BW-SERVICE] Fetched ${allIfaces.length} interfaces total`);
 
-          // 3. Match PPPoE interfaces to usernames
-          // MikroTik names PPPoE server interfaces as "<pppoe-USERNAME>"
-          let matched = 0;
-          for (const iface of allIfaces) {
-            const ifName = iface.name || '';
-            // Match pattern: <pppoe-USERNAME> 
-            const match = ifName.match(/^<pppoe-(.+)>$/);
-            if (!match) continue;
+      // 3. Match PPPoE interfaces to usernames
+      // MikroTik names PPPoE server interfaces as "<pppoe-USERNAME>"
+      let matched = 0;
+      for (const iface of allIfaces) {
+        const ifName = iface.name || '';
+        // Match pattern: <pppoe-USERNAME> 
+        const match = ifName.match(/^<pppoe-(.+)>$/);
+        if (!match) continue;
 
-            const username = match[1];
-            if (!sessionMap.has(username)) continue;
+        const username = match[1];
+        if (!sessionMap.has(username)) continue;
 
-            const uploadBytes = Number(iface['rx-byte'] || 0);
-            const downloadBytes = Number(iface['tx-byte'] || 0);
+        const uploadBytes = Number(iface['rx-byte'] || 0);
+        const downloadBytes = Number(iface['tx-byte'] || 0);
 
-            // Parse uptime
-            let sessionSeconds = 0;
-            const up = sessionMap.get(username) || '';
-            const dM = up.match(/(\d+)d/);
-            const hM = up.match(/(\d+)h/);
-            const mM = up.match(/(\d+)m/);
-            const sM = up.match(/(\d+)s/);
-            if (dM) sessionSeconds += parseInt(dM[1]) * 86400;
-            if (hM) sessionSeconds += parseInt(hM[1]) * 3600;
-            if (mM) sessionSeconds += parseInt(mM[1]) * 60;
-            if (sM) sessionSeconds += parseInt(sM[1]);
+        // Parse uptime
+        let sessionSeconds = 0;
+        const up = sessionMap.get(username) || '';
+        const dM = up.match(/(\d+)d/);
+        const hM = up.match(/(\d+)h/);
+        const mM = up.match(/(\d+)m/);
+        const sM = up.match(/(\d+)s/);
+        if (dM) sessionSeconds += parseInt(dM[1]) * 86400;
+        if (hM) sessionSeconds += parseInt(hM[1]) * 3600;
+        if (mM) sessionSeconds += parseInt(mM[1]) * 60;
+        if (sM) sessionSeconds += parseInt(sM[1]);
 
-            usageMap.set(username, {
-              upload_bytes: uploadBytes,
-              download_bytes: downloadBytes,
-              session_seconds: sessionSeconds,
-            });
-            matched++;
-          }
-          console.log(`[BW-SERVICE] Matched ${matched} PPPoE interfaces to users`);
+        usageMap.set(username, {
+          upload_bytes: uploadBytes,
+          download_bytes: downloadBytes,
+          session_seconds: sessionSeconds,
+        });
+        matched++;
+      }
+      console.log(`[BW-SERVICE] Matched ${matched} PPPoE interfaces to users`);
 
-          // If no <pppoe-X> matches, try alternate naming (pppoe-USERNAME without angle brackets)
-          if (matched === 0 && sessionMap.size > 0) {
-            console.log(`[BW-SERVICE] No <pppoe-X> matches, trying alternate names...`);
-            // Log first 3 interface names for debugging
-            const sampleNames = allIfaces.slice(0, 10).map(i => i.name).join(', ');
-            console.log(`[BW-SERVICE] Sample interface names: ${sampleNames}`);
+      // If no <pppoe-X> matches, try alternate naming (pppoe-USERNAME without angle brackets)
+      if (matched === 0 && sessionMap.size > 0) {
+        console.log(`[BW-SERVICE] No <pppoe-X> matches, trying alternate names...`);
+        // Log first 3 interface names for debugging
+        const sampleNames = allIfaces.slice(0, 10).map(i => i.name).join(', ');
+        console.log(`[BW-SERVICE] Sample interface names: ${sampleNames}`);
 
-            for (const iface of allIfaces) {
-              const ifName = iface.name || '';
-              // Try patterns: pppoe-USERNAME, ppp-USERNAME, or just USERNAME
-              for (const [username] of sessionMap) {
-                if (ifName === `pppoe-${username}` || ifName === `ppp-${username}` || ifName === username) {
-                  usageMap.set(username, {
-                    upload_bytes: Number(iface['rx-byte'] || 0),
-                    download_bytes: Number(iface['tx-byte'] || 0),
-                    session_seconds: 0,
-                  });
-                  matched++;
-                  break;
-                }
-              }
+        for (const iface of allIfaces) {
+          const ifName = iface.name || '';
+          // Try patterns: pppoe-USERNAME, ppp-USERNAME, or just USERNAME
+          for (const [username] of sessionMap) {
+            if (ifName === `pppoe-${username}` || ifName === `ppp-${username}` || ifName === username) {
+              usageMap.set(username, {
+                upload_bytes: Number(iface['rx-byte'] || 0),
+                download_bytes: Number(iface['tx-byte'] || 0),
+                session_seconds: 0,
+              });
+              matched++;
+              break;
             }
-            console.log(`[BW-SERVICE] Alternate matching found ${matched} interfaces`);
           }
-        }, routerConfig);
-      } catch (err) {
-        console.warn(`[BW-SERVICE] MikroTik fetch failed for ${routerConfig.name || routerConfig.host}: ${err.message}`);
+        }
+        console.log(`[BW-SERVICE] Alternate matching found ${matched} interfaces`);
       }
-      // Small delay between routers to prevent API overload
-      if (routerConfigs.indexOf(routerConfig) < routerConfigs.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-    }
+    }, routerConfig);
   } catch (err) {
     console.warn(`[BW-SERVICE] MikroTik usage fetch failed: ${err.message}`);
   }

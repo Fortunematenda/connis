@@ -17,7 +17,7 @@ export default function NetworkPage() {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [editSaving, setEditSaving] = useState(false);
-  const [form, setForm] = useState({ name: '', ip_address: '', username: 'admin', password: '', radius_secret: 'secret', port: '8728', auth_type: 'radius', is_default: true });
+  const [form, setForm] = useState({ name: '', ip_address: '', username: 'admin', password: '', port: '8728', auth_type: 'radius', is_default: true });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -56,7 +56,7 @@ export default function NetworkPage() {
     try {
       await routersApi.add({ ...form, port: parseInt(form.port) });
       toast.success('Router added');
-      setForm({ name: '', ip_address: '', username: 'admin', password: '', radius_secret: 'secret', port: '8728', auth_type: 'radius', is_default: true });
+      setForm({ name: '', ip_address: '', username: 'admin', password: '', port: '8728', auth_type: 'radius', is_default: true });
       setShowForm(false);
       fetchRouters(true);
     } catch (err) {
@@ -82,7 +82,7 @@ export default function NetworkPage() {
     setEditingId(router.id);
     setEditForm({
       name: router.name, ip_address: router.ip_address, username: router.username,
-      password: '', radius_secret: router.radius_secret || 'secret', port: String(router.port), auth_type: router.auth_type || 'radius', is_default: router.is_default,
+      password: '', port: String(router.port), auth_type: router.auth_type || 'radius', is_default: router.is_default,
     });
   };
 
@@ -165,12 +165,6 @@ export default function NetworkPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
                 <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
                   className={inputCls} placeholder="Router password" required />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">RADIUS Secret</label>
-                <input type="text" value={form.radius_secret} onChange={(e) => setForm({ ...form, radius_secret: e.target.value })}
-                  className={inputCls} placeholder="secret" />
-                <p className="text-xs text-gray-400 mt-1">Must match the RADIUS secret on your MikroTik router (RADIUS client config)</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">API Port</label>
@@ -265,11 +259,6 @@ export default function NetworkPage() {
                         <div>
                           <label className="block text-xs font-medium text-gray-500 mb-1">Password (leave blank to keep)</label>
                           <input type="password" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} className={inputCls} placeholder="Unchanged" />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">RADIUS Secret</label>
-                          <input type="text" value={editForm.radius_secret} onChange={(e) => setEditForm({ ...editForm, radius_secret: e.target.value })} className={inputCls} placeholder="secret" />
-                          <p className="text-xs text-gray-400 mt-1">Must match MikroTik RADIUS client config</p>
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-500 mb-1">API Port</label>

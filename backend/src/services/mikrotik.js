@@ -212,71 +212,18 @@ class MikroTikClient {
   }
 }
 
-// ──// Simple connection pool per router to avoid API overload
-const connectionPools = new Map(); // routerKey -> { client, inUse, lastUsed, created }
+// ── Connection wrapper (accepts optional routerConfig for multi-tenant) ──
 
-// Get router key for pooling
-const getRouterKey = (routerConfig) => {
-  return `${routerConfig.host}:${routerConfig.port}`;
-};
-
-// Connection wrapper with pooling
 const withConnection = async (callback, routerConfig) => {
-  const routerKey = getRouterKey(routerConfig);
-  const now = Date.now();
-  const POOL_TIMEOUT = 30000; // 30s max connection life
-  
-  let pool = connectionPools.get(routerKey);
-  let client = null;
-  
-  // Clean up expired pools
-  if (pool && (now - pool.created > POOL_TIMEOUT || now - pool.lastUsed > 60000)) {
-    try { pool.client.close(); } catch {}
-    connectionPools.delete(routerKey);
-    pool = null;
-  }
-  
-  // Create or reuse connection
-  if (!pool) {
-    client = new MikroTikClient(routerConfig);
+  const client = new MikroTikClient(routerConfig);
+  try {
     await client.connect();
     await client.login();
-    connectionPools.set(routerKey, {
-      client,
-      inUse: true,
-      lastUsed: now,
-      created: now
-    });
-  } else {
-    client = pool.client;
-    pool.inUse = true;
-    pool.lastUsed = now;
-  }
-  
-  try {
     return await callback(client);
   } finally {
-    // Mark as not in use but keep connection alive for reuse
-    const currentPool = connectionPools.get(routerKey);
-    if (currentPool) {
-      currentPool.inUse = false;
-      currentPool.lastUsed = now;
-    }
-    // Don't close - keep for reuse
+    client.close();
   }
 };
-
-// Periodic cleanup of idle connections
-setInterval(() => {
-  const now = Date.now();
-  const POOL_TIMEOUT = 30000; // 30s max connection life
-  for (const [key, pool] of connectionPools.entries()) {
-    if (!pool.inUse && (now - pool.lastUsed > 60000 || now - pool.created > POOL_TIMEOUT)) {
-      try { pool.client.close(); } catch {}
-      connectionPools.delete(key);
-    }
-  }
-}, 30000); // Cleanup every 30s
 
 // ── PPPoE Secret Management ────────────────────────────────
 

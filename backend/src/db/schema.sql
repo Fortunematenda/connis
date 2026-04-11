@@ -58,6 +58,8 @@ CREATE TABLE IF NOT EXISTS routers (
   updated_at    TIMESTAMP DEFAULT NOW()
 );
 
+
+
 CREATE INDEX IF NOT EXISTS idx_routers_company ON routers(company_id);
 
 -- ============================================================
