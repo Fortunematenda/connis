@@ -92,29 +92,27 @@ const backgroundSync = async (companyId, adminId = null) => {
       finally { client.release(); }
     }
     console.log(`[SYNC] Auto-imported ${imported} customers from RADIUS DB (${skipped} skipped) for company ${companyId}`);
-
-    // Also sync all routers to RADIUS NAS table for multi-router auth
-    await syncAllNas(companyId);
   } catch (err) {
     console.warn(`[SYNC] Background sync failed: ${err.message}`);
   }
 };
 
 /**
- * Sync all company routers to RADIUS NAS table (for multi-router auth)
+ * Sync all company routers to RADIUS NAS table (for multi-router auth).
+ * Only registers routers that have a radius_secret set.
  */
 const syncAllNas = async (companyId) => {
   try {
     const routersRes = await pool.query(
-      'SELECT id, name, ip_address, password_enc FROM routers WHERE company_id = $1 AND active = TRUE',
+      `SELECT id, name, ip_address, radius_secret FROM routers
+       WHERE company_id = $1 AND active = TRUE AND radius_secret IS NOT NULL AND radius_secret != ''`,
       [companyId]
     );
     for (const router of routersRes.rows) {
       try {
-        const pwd = router.password_enc ? decrypt(router.password_enc) : 'secret';
         await radiusService.upsertNas(
           router.ip_address,
-          pwd,
+          router.radius_secret,
           router.name,
           `Router ${router.name} for company ${companyId}`
         );
@@ -131,7 +129,7 @@ const syncAllNas = async (companyId) => {
 // POST /routers — Add a new router for the company
 const addRouter = async (req, res, next) => {
   try {
-    const { name, ip_address, username, password, port, auth_type, is_default } = req.body;
+    const { name, ip_address, username, password, port, auth_type, is_default, radius_secret } = req.body;
     const companyId = req.companyId;
 
     // If setting as default, unset other defaults first
@@ -146,22 +144,24 @@ const addRouter = async (req, res, next) => {
     const passwordEnc = encrypt(password);
 
     const result = await pool.query(
-      `INSERT INTO routers (company_id, name, ip_address, username, password_enc, port, auth_type, is_default)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING id, company_id, name, ip_address, username, port, auth_type, is_default, active, created_at`,
-      [companyId, name, ip_address, username || 'admin', passwordEnc, port || 8728, auth_type || 'radius', is_default || false]
+      `INSERT INTO routers (company_id, name, ip_address, username, password_enc, radius_secret, port, auth_type, is_default)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id, company_id, name, ip_address, username, radius_secret, port, auth_type, is_default, active, created_at`,
+      [companyId, name, ip_address, username || 'admin', passwordEnc, radius_secret || 'secret', port || 8728, auth_type || 'radius', is_default || false]
     );
 
     res.status(201).json({ success: true, data: result.rows[0] });
 
-    // Register router IP in RADIUS NAS table (required for multi-router auth)
+    // Register ONLY this new router in RADIUS NAS table (using the correct RADIUS secret)
+    const nasSecret = radius_secret || 'secret';
     try {
       await radiusService.upsertNas(
         ip_address,
-        password || 'secret', // Use same password as NAS secret
+        nasSecret,
         name,
         `Router ${name} for company ${companyId}`
       );
+      console.log(`[ROUTERS] NAS registered: ${ip_address} (${name})`);
     } catch (nasErr) {
       console.warn(`[ROUTERS] Failed to register NAS for ${ip_address}: ${nasErr.message}`);
     }
@@ -177,7 +177,7 @@ const addRouter = async (req, res, next) => {
 const getRouters = async (req, res, next) => {
   try {
     const result = await pool.query(
-      `SELECT id, company_id, name, ip_address, username, port, auth_type, is_default, active, created_at
+      `SELECT id, company_id, name, ip_address, username, radius_secret, port, auth_type, is_default, active, created_at
        FROM routers WHERE company_id = $1 ORDER BY is_default DESC, created_at DESC`,
       [req.companyId]
     );
@@ -192,7 +192,7 @@ const getRouters = async (req, res, next) => {
 const updateRouter = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, ip_address, username, password, port, auth_type, is_default } = req.body;
+    const { name, ip_address, username, password, port, auth_type, is_default, radius_secret } = req.body;
     const companyId = req.companyId;
 
     // Verify router belongs to company
@@ -220,6 +220,7 @@ const updateRouter = async (req, res, next) => {
     if (ip_address) { fields.push(`ip_address = $${idx++}`); values.push(ip_address); }
     if (username) { fields.push(`username = $${idx++}`); values.push(username); }
     if (password) { fields.push(`password_enc = $${idx++}`); values.push(encrypt(password)); }
+    if (radius_secret !== undefined) { fields.push(`radius_secret = $${idx++}`); values.push(radius_secret); }
     if (port) { fields.push(`port = $${idx++}`); values.push(port); }
     if (auth_type) { fields.push(`auth_type = $${idx++}`); values.push(auth_type); }
     if (is_default !== undefined) { fields.push(`is_default = $${idx++}`); values.push(is_default); }
@@ -230,23 +231,25 @@ const updateRouter = async (req, res, next) => {
 
     const result = await pool.query(
       `UPDATE routers SET ${fields.join(', ')} WHERE id = $${idx++} AND company_id = $${idx}
-       RETURNING id, company_id, name, ip_address, username, port, auth_type, is_default, active, updated_at`,
+       RETURNING id, company_id, name, ip_address, username, radius_secret, port, auth_type, is_default, active, updated_at`,
       values
     );
 
     res.json({ success: true, data: result.rows[0] });
 
-    // Update NAS entry if IP changed
-    if (ip_address && password) {
+    // Update NAS entry if IP or radius_secret changed
+    const updatedRouter = result.rows[0];
+    if ((ip_address || radius_secret) && updatedRouter.radius_secret) {
       try {
         await radiusService.upsertNas(
-          ip_address,
-          password,
-          name || result.rows[0].name,
-          `Router ${name || result.rows[0].name} for company ${companyId}`
+          updatedRouter.ip_address,
+          updatedRouter.radius_secret,
+          updatedRouter.name,
+          `Router ${updatedRouter.name} for company ${companyId}`
         );
+        console.log(`[ROUTERS] NAS updated: ${updatedRouter.ip_address} (${updatedRouter.name})`);
       } catch (nasErr) {
-        console.warn(`[ROUTERS] Failed to update NAS for ${ip_address}: ${nasErr.message}`);
+        console.warn(`[ROUTERS] Failed to update NAS for ${updatedRouter.ip_address}: ${nasErr.message}`);
       }
     }
   } catch (err) {

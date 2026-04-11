@@ -48,7 +48,8 @@ CREATE TABLE IF NOT EXISTS routers (
   name          VARCHAR(100) NOT NULL,
   ip_address    VARCHAR(100) NOT NULL,
   username      VARCHAR(100) NOT NULL DEFAULT 'admin',
-  password_enc  TEXT NOT NULL,                  -- encrypted password
+  password_enc  TEXT NOT NULL,                  -- encrypted API password
+  radius_secret VARCHAR(100) DEFAULT 'secret', -- RADIUS shared secret (must match MikroTik RADIUS client config)
   port          INTEGER NOT NULL DEFAULT 8728,
   auth_type     VARCHAR(10) NOT NULL DEFAULT 'radius',  -- 'radius' or 'api'
   is_default    BOOLEAN DEFAULT FALSE,
