@@ -13,6 +13,8 @@ const radiusService = require('./radiusService');
 const mikrotik = require('./mikrotik');
 const { getRouterConfigForCompany } = require('./routerResolver');
 
+const FAST_MIKROTIK_TIMEOUT_MS = 4000;
+
 // ── Rate Limit Generation ───────────────────────────────────
 
 /**
@@ -54,6 +56,7 @@ const getUsageFromMikrotik = async (usernames, companyId) => {
     }
 
     const { withConnection } = require('./mikrotik');
+    const fastRouterConfig = { ...routerConfig, timeout: FAST_MIKROTIK_TIMEOUT_MS };
     await withConnection(async (client) => {
       // 1. Get active PPP sessions
       const sessions = await client.talk(['/ppp/active/print']);
@@ -131,7 +134,7 @@ const getUsageFromMikrotik = async (usernames, companyId) => {
         }
         console.log(`[BW-SERVICE] Alternate matching found ${matched} interfaces`);
       }
-    }, routerConfig);
+    }, fastRouterConfig);
   } catch (err) {
     console.warn(`[BW-SERVICE] MikroTik usage fetch failed: ${err.message}`);
   }

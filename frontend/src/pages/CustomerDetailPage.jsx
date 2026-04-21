@@ -15,6 +15,8 @@ import CustomerTickets from '../components/CustomerTickets';
 import CustomerDocuments from '../components/CustomerDocuments';
 import CustomerTasks from '../components/CustomerTasks';
 import CustomerInvoices from '../components/CustomerInvoices';
+import SubscriptionGate from '../components/SubscriptionGate';
+import { useSubscription } from '../contexts/SubscriptionContext';
 
 // ── Tabs ──────────────────────────────────────────────────────
 const TABS = [
@@ -31,6 +33,7 @@ const TABS = [
 export default function CustomerDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isExpired, openUpgradeModal } = useSubscription();
   const [customer, setCustomer] = useState(null);
   const [plans, setPlans] = useState([]);
   const [session, setSession] = useState(null);
@@ -448,10 +451,12 @@ export default function CustomerDetailPage() {
                     <tr><td colSpan={7} className="px-5 py-12 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <p className="text-gray-400 text-sm">No active services</p>
-                        <button onClick={() => setPlanModalOpen(true)}
-                          className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700">
-                          + Add Service Plan
-                        </button>
+                        <SubscriptionGate>
+                          <button onClick={() => setPlanModalOpen(true)}
+                            className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700">
+                            + Add Service Plan
+                          </button>
+                        </SubscriptionGate>
                       </div>
                     </td></tr>
                   )}
@@ -506,18 +511,18 @@ export default function CustomerDetailPage() {
           <div className="fixed inset-0 z-[80]" onClick={() => setActionsOpen(false)} />
           <div className="fixed top-1/3 right-12 z-[90] bg-white border rounded-xl shadow-2xl py-2 w-52">
             {customer.active ? (
-              <button onClick={() => { handleToggleStatus(); setActionsOpen(false); }}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
+              <button onClick={() => { if (isExpired) { openUpgradeModal(); setActionsOpen(false); return; } handleToggleStatus(); setActionsOpen(false); }}
+                className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${isExpired ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:bg-red-50'}`}>
                 <PowerOff size={15} /> Block Service
               </button>
             ) : (
-              <button onClick={() => { handleToggleStatus(); setActionsOpen(false); }}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-emerald-600 hover:bg-emerald-50 transition-colors">
+              <button onClick={() => { if (isExpired) { openUpgradeModal(); setActionsOpen(false); return; } handleToggleStatus(); setActionsOpen(false); }}
+                className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${isExpired ? 'text-gray-400 cursor-not-allowed' : 'text-emerald-600 hover:bg-emerald-50'}`}>
                 <Power size={15} /> Activate Service
               </button>
             )}
-            <button onClick={() => { openPlanModal(); setActionsOpen(false); }}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+            <button onClick={() => { if (isExpired) { openUpgradeModal(); setActionsOpen(false); return; } openPlanModal(); setActionsOpen(false); }}
+              className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${isExpired ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50'}`}>
               <ArrowRight size={15} /> Change Plan
             </button>
             <button onClick={() => setActionsOpen(false)}
@@ -525,8 +530,8 @@ export default function CustomerDetailPage() {
               <RefreshCw size={15} /> Restart Session
             </button>
             <div className="border-t my-1" />
-            <button onClick={() => { handleDeleteCustomer(); setActionsOpen(false); }}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
+            <button onClick={() => { if (isExpired) { openUpgradeModal(); setActionsOpen(false); return; } handleDeleteCustomer(); setActionsOpen(false); }}
+              className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${isExpired ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:bg-red-50'}`}>
               <Trash2 size={15} /> Delete Customer
             </button>
           </div>

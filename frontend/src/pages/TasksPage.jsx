@@ -62,7 +62,7 @@ export default function TasksPage() {
       setTasks(tRes.data);
       setCustomers(cRes.data);
       setStaff(sRes.data || []);
-    } catch { toast.error('Failed to load tasks'); }
+    } catch (err) { if (!err.isSubscriptionError) toast.error('Failed to load tasks'); }
     setLoading(false);
   }, []);
 
@@ -73,7 +73,7 @@ export default function TasksPage() {
       const res = await tasksApi.getById(id);
       setDetail(res.data);
       setSelectedTask(id);
-    } catch { toast.error('Failed to load task'); }
+    } catch (err) { if (!err.isSubscriptionError) toast.error('Failed to load task'); }
   };
 
   const handleCreate = async () => {

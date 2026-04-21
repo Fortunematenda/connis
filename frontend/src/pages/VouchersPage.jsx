@@ -26,7 +26,7 @@ export default function VouchersPage() {
       const used = filterUsed === 'all' ? undefined : filterUsed;
       const res = await vouchersApi.getAll(used);
       setVouchers(res.data);
-    } catch { toast.error('Failed to load vouchers'); }
+    } catch (err) { if (!err.isSubscriptionError) toast.error('Failed to load vouchers'); }
     setLoading(false);
   }, [filterUsed]);
 

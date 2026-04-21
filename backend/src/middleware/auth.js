@@ -39,18 +39,46 @@ const authenticate = async (req, res, next) => {
   }
 };
 
+// ── Subscription helpers ──────────────────────────────────
+
+// Returns true if the company subscription is expired or cancelled
+const isSubscriptionInactive = (admin) => {
+  const { subscription_status, expires_at } = admin;
+  if (subscription_status === 'cancelled' || subscription_status === 'expired') return true;
+  if (expires_at && new Date(expires_at) < new Date()) return true;
+  return false;
+};
+
+// Standard 403 response for expired subscriptions — stops execution immediately
+const sendSubscriptionExpired = (req, res) => {
+  console.log(`[SUBSCRIPTION] Blocked ${req.method} ${req.originalUrl} — admin ${req.admin.id} (company ${req.companyId})`);
+  return res.status(403).json({
+    success: false,
+    error: 'SUBSCRIPTION_EXPIRED',
+    message: 'Your subscription has expired. Please renew to continue.',
+  });
+};
+
 // Check subscription is active (use after authenticate)
+// Only blocks mutative requests (POST/PUT/DELETE/PATCH) — GET requests pass through
+// so users can still VIEW their data when subscription is expired
 const requireActiveSubscription = (req, res, next) => {
-  const { subscription_status, expires_at } = req.admin;
+  const readOnly = req.method === 'GET' || req.method === 'HEAD';
+  if (readOnly) return next();
 
-  if (subscription_status === 'cancelled') {
-    return next(new ApiError(403, 'Your subscription has been cancelled. Please contact support.'));
+  if (isSubscriptionInactive(req.admin)) {
+    return sendSubscriptionExpired(req, res);
   }
 
-  if (subscription_status === 'expired' || (expires_at && new Date(expires_at) < new Date())) {
-    return next(new ApiError(403, 'Your subscription has expired. Please renew to continue.'));
-  }
+  next();
+};
 
+// Strict subscription check — blocks ALL methods including GET
+// Use for routes that trigger heavy external calls (MikroTik, bandwidth)
+const requireActiveSubscriptionStrict = (req, res, next) => {
+  if (isSubscriptionInactive(req.admin)) {
+    return sendSubscriptionExpired(req, res);
+  }
   next();
 };
 
@@ -63,4 +91,4 @@ const generateToken = (adminId, companyId) => {
   );
 };
 
-module.exports = { authenticate, requireActiveSubscription, generateToken };
+module.exports = { authenticate, requireActiveSubscription, requireActiveSubscriptionStrict, generateToken };

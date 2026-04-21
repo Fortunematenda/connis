@@ -2,6 +2,22 @@
 // All protected routes include JWT Bearer token from localStorage
 const API_BASE = '/api';
 
+// Subscription error event — allows SubscriptionContext to listen
+const SUBSCRIPTION_ERROR_EVENT = 'connis:subscription-expired';
+export const onSubscriptionError = (callback) => {
+  window.addEventListener(SUBSCRIPTION_ERROR_EVENT, callback);
+  return () => window.removeEventListener(SUBSCRIPTION_ERROR_EVENT, callback);
+};
+
+// Custom error class for subscription issues — callers can check `err.isSubscriptionError`
+export class SubscriptionError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'SubscriptionError';
+    this.isSubscriptionError = true;
+  }
+}
+
 const handleResponse = async (res) => {
   const data = await res.json();
   if (!res.ok) {
@@ -11,6 +27,11 @@ const handleResponse = async (res) => {
       localStorage.removeItem('connis_admin');
       localStorage.removeItem('connis_company');
       window.location.href = '/login';
+    }
+    // Subscription expired — trigger UI state, no alert()
+    if (res.status === 403 && data.error === 'SUBSCRIPTION_EXPIRED') {
+      window.dispatchEvent(new CustomEvent(SUBSCRIPTION_ERROR_EVENT));
+      throw new SubscriptionError(data.message || 'Your subscription has expired');
     }
     throw new Error(data.error || data.errors?.[0]?.message || 'Request failed');
   }
@@ -217,7 +238,7 @@ export const routersApi = {
   },
 
   testConnection: async (id) => {
-    const res = await authFetch(`${API_BASE}/routers/${id}/test`, { method: 'POST' });
+    const res = await authFetch(`${API_BASE}/routers/${id}/test`);
     return handleResponse(res);
   },
 };

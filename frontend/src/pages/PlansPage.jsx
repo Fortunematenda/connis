@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Loader2, Zap, Trash2, Edit2, LayoutGrid, List } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { plansApi } from '../services/api';
+import SubscriptionGate from '../components/SubscriptionGate';
 
 export default function PlansPage() {
   const [plans, setPlans] = useState([]);
@@ -20,7 +21,7 @@ export default function PlansPage() {
       const result = await plansApi.getAll();
       setPlans(result.data);
     } catch (err) {
-      toast.error('Failed to load plans: ' + err.message);
+      if (!err.isSubscriptionError) toast.error('Failed to load plans: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -109,13 +110,15 @@ export default function PlansPage() {
               <List size={16} />
             </button>
           </div>
-          <button
-            onClick={handleAddNew}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 transition-colors"
-          >
-            <Plus size={16} />
-            Add Plan
-          </button>
+          <SubscriptionGate>
+            <button
+              onClick={handleAddNew}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 transition-colors"
+            >
+              <Plus size={16} />
+              Add Plan
+            </button>
+          </SubscriptionGate>
         </div>
       </div>
 

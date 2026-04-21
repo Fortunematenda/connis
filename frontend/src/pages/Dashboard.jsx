@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { dashboardApi, notificationsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '—';
 const fmtCurrency = (v) => 'R' + Number(v || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -37,6 +38,7 @@ const LEAD_STATUS_COLORS = {
 
 export default function Dashboard() {
   const { company, admin } = useAuth();
+  const { isExpired, isTrial, openUpgradeModal } = useSubscription();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -79,22 +81,32 @@ export default function Dashboard() {
       </div>
 
       {/* ── Subscription warnings ── */}
-      {company?.subscription_status === 'trial' && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
-          <AlertTriangle size={18} className="text-amber-500 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-amber-800">Free Trial</p>
-            <p className="text-xs text-amber-600">Expires {company.expires_at ? new Date(company.expires_at).toLocaleDateString() : 'N/A'}. Upgrade to keep your service running.</p>
+      {isTrial && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <AlertTriangle size={18} className="text-amber-500 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-amber-800">Free Trial</p>
+              <p className="text-xs text-amber-600">Expires {company?.expires_at ? new Date(company.expires_at).toLocaleDateString() : 'N/A'}. Upgrade to keep your service running.</p>
+            </div>
           </div>
+          <button onClick={openUpgradeModal} className="flex-shrink-0 px-4 py-1.5 bg-amber-500 text-white text-sm font-semibold rounded-lg hover:bg-amber-600 transition-colors">
+            Upgrade
+          </button>
         </div>
       )}
-      {company?.subscription_status === 'expired' && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
-          <AlertTriangle size={18} className="text-red-500 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-red-800">Subscription Expired</p>
-            <p className="text-xs text-red-600">Please renew to continue managing your network.</p>
+      {isExpired && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <AlertTriangle size={18} className="text-red-500 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-red-800">Subscription Expired</p>
+              <p className="text-xs text-red-600">Please renew to continue managing your network.</p>
+            </div>
           </div>
+          <button onClick={openUpgradeModal} className="flex-shrink-0 px-4 py-1.5 bg-red-500 text-white text-sm font-semibold rounded-lg hover:bg-red-600 transition-colors">
+            Upgrade
+          </button>
         </div>
       )}
 

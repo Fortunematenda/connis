@@ -41,7 +41,7 @@ router.put(
 // DELETE /routers/:id — Delete a router
 router.delete('/:id', deleteRouter);
 
-// POST /routers/:id/test — Test router connection
-router.post('/:id/test', testRouterConnection);
+// GET /routers/:id/test — Test router connection (shows online/offline status)
+router.get('/:id/test', testRouterConnection);
 
 module.exports = router;

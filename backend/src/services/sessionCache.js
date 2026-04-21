@@ -13,6 +13,8 @@ const cache = new Map(); // companyId → { sessions, sessionMap, routerOnline, 
 
 const CACHE_TTL = 5000;   // 5s — trigger refresh if older than this
 const STALE_TTL = 60000;  // 60s — serve stale data up to 1 minute
+const MIKROTIK_RETRY_COOLDOWN = 60000; // 60s — avoid retry storm when router API is unreachable
+const FAST_MIKROTIK_TIMEOUT_MS = 4000; // 4s — fail fast, fallback to RADIUS
 
 // ── Empty cache entry ────────────────────────────────────────
 const emptyEntry = () => ({
@@ -22,6 +24,7 @@ const emptyEntry = () => ({
   lastUpdate: 0,
   lastSuccess: 0,
   refreshing: false,
+  mikrotikRetryAfter: 0,
 });
 
 // ── Get cached sessions for a company ────────────────────────
@@ -65,28 +68,38 @@ const triggerRefresh = (companyId, routerConfig) => {
 // ── Actual refresh: MikroTik API + RADIUS accounting ─────────
 const refreshSessions = async (companyId, routerConfig) => {
   const existing = cache.get(companyId);
+  const now = Date.now();
   const sessions = [];
   let routerOnline = false;
   let fetchSuccess = false;
+  let mikrotikRetryAfter = existing?.mikrotikRetryAfter || 0;
 
   // Source 1: MikroTik active PPP sessions (primary)
   if (routerConfig) {
-    try {
-      const raw = await getActiveSessions(routerConfig);
-      routerOnline = true;
-      fetchSuccess = true;
-      for (const s of raw) {
-        sessions.push({
-          username: s.name,
-          ip: s.address || '',
-          uptime: s.uptime || '',
-          callerId: s['caller-id'] || '',
-          service: s.service || '',
-          source: 'mikrotik',
-        });
+    const inCooldown = existing && existing.mikrotikRetryAfter && now < existing.mikrotikRetryAfter;
+    if (!inCooldown) {
+      try {
+        const fastConfig = { ...routerConfig, timeout: FAST_MIKROTIK_TIMEOUT_MS };
+        const raw = await getActiveSessions(fastConfig);
+        routerOnline = true;
+        fetchSuccess = true;
+        mikrotikRetryAfter = 0;
+        for (const s of raw) {
+          sessions.push({
+            username: s.name,
+            ip: s.address || '',
+            uptime: s.uptime || '',
+            callerId: s['caller-id'] || '',
+            service: s.service || '',
+            source: 'mikrotik',
+          });
+        }
+      } catch (err) {
+        const retryAt = now + MIKROTIK_RETRY_COOLDOWN;
+        console.warn(`[SESSION-CACHE] MikroTik fetch failed: ${err.message} (retry in ${Math.round(MIKROTIK_RETRY_COOLDOWN / 1000)}s)`);
+        mikrotikRetryAfter = retryAt;
+        if (existing) existing.mikrotikRetryAfter = retryAt;
       }
-    } catch (err) {
-      console.warn(`[SESSION-CACHE] MikroTik fetch failed: ${err.message}`);
     }
   }
 
@@ -134,7 +147,6 @@ const refreshSessions = async (companyId, routerConfig) => {
     sessionMap.set(s.username, s);
   }
 
-  const now = Date.now();
   const entry = {
     sessions,
     sessionMap,
@@ -142,6 +154,7 @@ const refreshSessions = async (companyId, routerConfig) => {
     lastUpdate: now,
     lastSuccess: fetchSuccess ? now : (existing?.lastSuccess || 0),
     refreshing: false,
+    mikrotikRetryAfter,
   };
 
   cache.set(companyId, entry);

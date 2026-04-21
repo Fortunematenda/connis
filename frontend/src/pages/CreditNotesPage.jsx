@@ -38,7 +38,7 @@ export default function CreditNotesPage() {
       if (statusFilter !== 'all') params.status = statusFilter;
       const res = await creditNotesApi.getAll(params);
       setNotes(res.data || []);
-    } catch { toast.error('Failed to load credit notes'); }
+    } catch (err) { if (!err.isSubscriptionError) toast.error('Failed to load credit notes'); }
     finally { setLoading(false); }
   };
 
@@ -97,7 +97,7 @@ export default function CreditNotesPage() {
     try {
       const res = await creditNotesApi.getById(id);
       setDetail(res.data);
-    } catch { toast.error('Failed to load credit note'); }
+    } catch (err) { if (!err.isSubscriptionError) toast.error('Failed to load credit note'); }
     finally { setDetailLoading(false); }
   };
 

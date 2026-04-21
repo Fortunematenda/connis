@@ -67,7 +67,7 @@ export default function TicketsPage() {
       setTickets(tRes.data);
       setCustomers(cRes.data);
       setStaff(sRes.data || []);
-    } catch { toast.error('Failed to load tickets'); }
+    } catch (err) { if (!err.isSubscriptionError) toast.error('Failed to load tickets'); }
     setLoading(false);
   }, []);
 
@@ -87,7 +87,7 @@ export default function TicketsPage() {
       const res = await ticketsApi.getById(id);
       setDetail(res.data);
       setSelectedTicket(id);
-    } catch { toast.error('Failed to load ticket'); }
+    } catch (err) { if (!err.isSubscriptionError) toast.error('Failed to load ticket'); }
   };
 
   const handleCreate = async () => {

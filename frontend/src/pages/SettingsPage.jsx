@@ -7,6 +7,7 @@ import {
 import toast from 'react-hot-toast';
 import { authApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 
 const TABS = [
   { key: 'company', label: 'Company', icon: Building2 },
@@ -27,6 +28,7 @@ const MOCK_LOGS = [
 
 const SettingsPage = () => {
   const { company, admin, refreshCompany } = useAuth();
+  const { openUpgradeModal } = useSubscription();
   const [tab, setTab] = useState('company');
 
   // Company edit state
@@ -258,9 +260,17 @@ const SettingsPage = () => {
                         <span className="text-sm text-gray-600">{company?.subscription_plan}</span>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-400 font-medium">Expires</p>
-                      <p className="text-sm font-semibold text-gray-800 mt-1">{company?.expires_at ? new Date(company.expires_at).toLocaleDateString() : 'N/A'}</p>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-xs text-gray-400 font-medium">Expires</p>
+                        <p className="text-sm font-semibold text-gray-800 mt-1">{company?.expires_at ? new Date(company.expires_at).toLocaleDateString() : 'N/A'}</p>
+                      </div>
+                      <button
+                        onClick={openUpgradeModal}
+                        className="px-4 py-1.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold rounded-lg hover:from-violet-700 hover:to-purple-700 transition-all shadow-sm"
+                      >
+                        Upgrade
+                      </button>
                     </div>
                   </div>
                 </div>

@@ -29,7 +29,7 @@ export default function ItemsPage() {
     try {
       const res = await billableItemsApi.getAll();
       setItems(res.data || []);
-    } catch { toast.error('Failed to load items'); }
+    } catch (err) { if (!err.isSubscriptionError) toast.error('Failed to load items'); }
     finally { setLoading(false); }
   };
 

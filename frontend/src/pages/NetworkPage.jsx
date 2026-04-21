@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { routersApi } from '../services/api';
+import SubscriptionGate from '../components/SubscriptionGate';
 
 const inputCls = 'w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm';
 
@@ -117,10 +118,12 @@ export default function NetworkPage() {
           </h1>
           <p className="text-sm text-gray-500 mt-1">Manage your MikroTik routers and network configuration</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)}
-          className="bg-amber-500/90 text-white px-4 py-2.5 rounded-xl hover:bg-amber-600 flex items-center gap-2 text-sm font-medium transition shadow-sm">
-          <Plus size={16} /> Add Router
-        </button>
+        <SubscriptionGate>
+          <button onClick={() => setShowForm(!showForm)}
+            className="bg-amber-500/90 text-white px-4 py-2.5 rounded-xl hover:bg-amber-600 flex items-center gap-2 text-sm font-medium transition shadow-sm">
+            <Plus size={16} /> Add Router
+          </button>
+        </SubscriptionGate>
       </div>
 
       {/* Stats */}
@@ -220,15 +223,23 @@ export default function NetworkPage() {
             const isEditing = editingId === router.id;
             return (
               <div key={router.id} className={`bg-white rounded-xl border overflow-hidden transition-all ${
-                result?.connected ? 'border-green-200' : result && !result.connected ? 'border-red-200' : ''
+                result?.connected && !result.via_radius ? 'border-green-200'
+                : result?.connected && result.via_radius ? 'border-amber-200'
+                : result && !result.connected ? 'border-red-200' : ''
               }`}>
                 {/* Status bar */}
                 {result && (
                   <div className={`px-5 py-2 text-xs font-medium flex items-center gap-2 ${
-                    result.connected ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'
+                    result.connected && !result.via_radius
+                      ? 'bg-green-50 text-green-700'
+                      : result.connected && result.via_radius
+                      ? 'bg-amber-50 text-amber-700'
+                      : 'bg-red-50 text-red-600'
                   }`}>
-                    {result.connected ? (
+                    {result.connected && !result.via_radius ? (
                       <><Wifi size={12} /> Connected — {result.identity} (v{result.version}) — Uptime: {result.uptime}</>
+                    ) : result.connected && result.via_radius ? (
+                      <><Wifi size={12} /> Online — {result.active_sessions} active session{result.active_sessions !== 1 ? 's' : ''} (RADIUS)</>  
                     ) : (
                       <><WifiOff size={12} /> Offline{result.error ? ` — ${result.error}` : ''}</>
                     )}
@@ -300,7 +311,8 @@ export default function NetworkPage() {
                           }`}>
                             {router.auth_type === 'radius' ? 'RADIUS' : 'API'}
                           </span>
-                          {result?.connected && <span className="w-2.5 h-2.5 rounded-full bg-green-500" title="Connected" />}
+                          {result?.connected && !result.via_radius && <span className="w-2.5 h-2.5 rounded-full bg-green-500" title="Connected" />}
+                          {result?.connected && result.via_radius && <span className="w-2.5 h-2.5 rounded-full bg-amber-400" title="Online via RADIUS" />}
                           {result && !result.connected && <span className="w-2.5 h-2.5 rounded-full bg-red-500" title="Offline" />}
                         </div>
                         <p className="text-sm text-gray-500 mt-1">{router.ip_address}:{router.port} (user: {router.username})</p>

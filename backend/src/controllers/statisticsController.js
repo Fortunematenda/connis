@@ -4,6 +4,8 @@ const { ApiError } = require('../middleware/errorHandler');
 const { getInterfaceTraffic } = require('../services/mikrotik');
 const { getRouterConfigForCompany } = require('../services/routerResolver');
 
+const FAST_MIKROTIK_TIMEOUT_MS = 4000;
+
 // GET /customers/:id/statistics — Fetch RADIUS accounting data for a customer
 const getCustomerStatistics = async (req, res, next) => {
   try {
@@ -226,12 +228,49 @@ const getLiveBandwidth = async (req, res, next) => {
     const username = userRes.rows[0].username;
 
     const routerConfig = await getRouterConfigForCompany(req.companyId);
-    const traffic = await getInterfaceTraffic(username, routerConfig);
-    if (!traffic) {
-      return res.json({ success: true, data: null }); // user offline
-    }
+    const fastRouterConfig = routerConfig ? { ...routerConfig, timeout: FAST_MIKROTIK_TIMEOUT_MS } : null;
 
-    res.json({ success: true, data: traffic });
+    // Primary source: MikroTik interface counters
+    try {
+      const traffic = await getInterfaceTraffic(username, fastRouterConfig);
+      if (!traffic) {
+        return res.json({ success: true, data: null }); // user offline
+      }
+      return res.json({ success: true, data: traffic });
+    } catch (mkErr) {
+      // Fallback source: active RADIUS accounting row
+      // This keeps live bandwidth usable when API port 8728 is unreachable.
+      const activeSession = await radiusDb.query(
+        `SELECT
+           COALESCE(acctoutputoctets, 0) AS tx_bytes,
+           COALESCE(acctinputoctets, 0) AS rx_bytes,
+           acctstarttime
+         FROM radacct
+         WHERE username = $1 AND acctstoptime IS NULL
+         ORDER BY acctstarttime DESC
+         LIMIT 1`,
+        [username]
+      );
+
+      if (activeSession.rows.length === 0) {
+        return res.json({ success: true, data: null });
+      }
+
+      const s = activeSession.rows[0];
+      return res.json({
+        success: true,
+        data: {
+          name: `radius:${username}`,
+          txBytes: Number(s.tx_bytes) || 0,
+          rxBytes: Number(s.rx_bytes) || 0,
+          txPackets: 0,
+          rxPackets: 0,
+          running: true,
+          via_radius: true,
+          timestamp: Date.now(),
+        },
+      });
+    }
   } catch (err) {
     next(err);
   }

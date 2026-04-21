@@ -4,7 +4,7 @@ require('dotenv').config();
 
 const path = require('path');
 const { errorHandler } = require('./middleware/errorHandler');
-const { authenticate, requireActiveSubscription } = require('./middleware/auth');
+const { authenticate, requireActiveSubscription, requireActiveSubscriptionStrict } = require('./middleware/auth');
 const initDB = require('./db/init');
 
 // Route imports
@@ -54,13 +54,14 @@ app.use('/api/portal', portalRoutes);
 
 // ── Protected Routes (JWT + active subscription) ───────────
 const protect = [authenticate, requireActiveSubscription];
+const protectStrict = [authenticate, requireActiveSubscriptionStrict];
 
 app.use('/api/users', protect, usersRoutes);
 app.use('/api/plans', protect, plansRoutes);
 app.use('/api/leads', protect, leadsRoutes);
 app.use('/api/customers', protect, customersRoutes);
 app.use('/api/routers', protect, routersRoutes);
-app.use('/api/mikrotik', protect, mikrotikRoutes);
+app.use('/api/mikrotik', protectStrict, mikrotikRoutes);
 app.use('/api/staff', protect, staffRoutes);
 app.use('/api/tickets', protect, ticketsRoutes);
 app.use('/api/tasks', protect, tasksRoutes);

@@ -40,7 +40,7 @@ export default function StaffPage() {
       const res = await staffApi.getAll();
       setStaff(res.data);
     } catch (err) {
-      toast.error('Failed to load staff: ' + err.message);
+      if (!err.isSubscriptionError) toast.error('Failed to load staff: ' + err.message);
     } finally {
       setLoading(false);
     }

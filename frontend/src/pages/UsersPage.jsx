@@ -18,7 +18,7 @@ export default function UsersPage() {
       const result = await usersApi.getAll();
       setUsers(result.data);
     } catch (err) {
-      toast.error('Failed to load users: ' + err.message);
+      if (!err.isSubscriptionError) toast.error('Failed to load users: ' + err.message);
     } finally {
       setLoading(false);
     }

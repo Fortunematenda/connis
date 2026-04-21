@@ -7,6 +7,7 @@ import LeadCard from '../components/LeadCard';
 import AddLeadModal from '../components/AddLeadModal';
 import LeadDetailModal from '../components/LeadDetailModal';
 import { leadsApi } from '../services/api';
+import SubscriptionGate from '../components/SubscriptionGate';
 
 // Pipeline stage definitions — order matters for display
 const STAGES = [
@@ -39,7 +40,7 @@ export default function LeadsPipeline() {
       const result = await leadsApi.getAll();
       setLeads(result.data);
     } catch (err) {
-      toast.error('Failed to load leads: ' + err.message);
+      if (!err.isSubscriptionError) toast.error('Failed to load leads: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -147,13 +148,15 @@ export default function LeadsPipeline() {
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
             Refresh
           </button>
-          <button
-            onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 transition-colors shadow-sm"
-          >
-            <Plus size={16} />
-            Add Lead
-          </button>
+          <SubscriptionGate>
+            <button
+              onClick={() => setModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 transition-colors shadow-sm"
+            >
+              <Plus size={16} />
+              Add Lead
+            </button>
+          </SubscriptionGate>
         </div>
       </div>
 

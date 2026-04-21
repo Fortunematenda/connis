@@ -227,7 +227,7 @@ export default function MessagesPage() {
       setConversations(prev => prev.map(c =>
         c.user_id === uid ? { ...c, unread_count: 0 } : c
       ));
-    } catch { toast.error('Failed to load messages'); }
+    } catch (err) { if (!err.isSubscriptionError) toast.error('Failed to load messages'); }
     setMsgLoading(false);
   };
 

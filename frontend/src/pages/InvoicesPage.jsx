@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { invoicesApi, billableItemsApi, customersApi } from '../services/api';
+import SubscriptionGate from '../components/SubscriptionGate';
 
 const STATUS_META = {
   paid:      { label: 'Paid',      icon: CheckCircle,   color: 'bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' },
@@ -52,7 +53,7 @@ export default function InvoicesPage() {
       setInvoices(res.data || []);
       setSummary(res.summary || null);
     } catch (err) {
-      toast.error('Failed to load invoices');
+      if (!err.isSubscriptionError) toast.error('Failed to load invoices');
     } finally {
       setLoading(false);
     }
@@ -117,7 +118,7 @@ export default function InvoicesPage() {
     try {
       const res = await invoicesApi.getById(id);
       setDetail(res.data);
-    } catch { toast.error('Failed to load invoice'); }
+    } catch (err) { if (!err.isSubscriptionError) toast.error('Failed to load invoice'); }
     finally { setDetailLoading(false); }
   };
 
@@ -149,9 +150,11 @@ export default function InvoicesPage() {
           <button onClick={fetchData} className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 bg-white border rounded-lg hover:bg-gray-50">
             <RefreshCw size={14} /> Refresh
           </button>
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 shadow-sm">
-            <Plus size={14} /> New Invoice
-          </button>
+          <SubscriptionGate>
+            <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-white bg-amber-500/90 rounded-lg hover:bg-amber-600 shadow-sm">
+              <Plus size={14} /> New Invoice
+            </button>
+          </SubscriptionGate>
         </div>
       </div>
 

@@ -36,7 +36,7 @@ export default function TransactionsPage() {
       const res = await transactionsApi.getAll(params);
       setTransactions(res.data || []);
     } catch (err) {
-      toast.error('Failed to load transactions');
+      if (!err.isSubscriptionError) toast.error('Failed to load transactions');
     } finally {
       setLoading(false);
     }

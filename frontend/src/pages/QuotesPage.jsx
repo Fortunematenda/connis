@@ -41,7 +41,7 @@ export default function QuotesPage() {
       if (statusFilter !== 'all') params.status = statusFilter;
       const res = await quotesApi.getAll(params);
       setQuotes(res.data || []);
-    } catch { toast.error('Failed to load quotes'); }
+    } catch (err) { if (!err.isSubscriptionError) toast.error('Failed to load quotes'); }
     finally { setLoading(false); }
   };
 
@@ -107,7 +107,7 @@ export default function QuotesPage() {
     try {
       const res = await quotesApi.getById(id);
       setDetail(res.data);
-    } catch { toast.error('Failed to load quote'); }
+    } catch (err) { if (!err.isSubscriptionError) toast.error('Failed to load quote'); }
     finally { setDetailLoading(false); }
   };
 

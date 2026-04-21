@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, Search, RefreshCw, Users, ChevronRight, Eye, Wallet, WifiOff, SlidersHorizontal, Plus, UserPlus, Columns3, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { customersApi, usersApi, mikrotikApi } from '../services/api';
+import SubscriptionGate from '../components/SubscriptionGate';
 
 // ── Main Customers Page ─────────────────────────────────────
 
@@ -70,7 +71,7 @@ export default function CustomersPage() {
       setOnlineMap(oMap);
       setIpMap(iMap);
     } catch (err) {
-      toast.error('Failed to load customers');
+      if (!err.isSubscriptionError) toast.error('Failed to load customers');
     } finally {
       setLoading(false);
     }
@@ -173,11 +174,13 @@ export default function CustomersPage() {
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             <span className="hidden sm:inline">Refresh</span>
           </button>
-          <button onClick={() => navigate('/leads')}
-            className="flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-white bg-amber-500/90 rounded-xl hover:bg-amber-600 active:scale-95 shadow-sm transition-all">
-            <UserPlus size={14} />
-            <span className="hidden sm:inline">Add Customer</span>
-          </button>
+          <SubscriptionGate>
+            <button onClick={() => navigate('/leads')}
+              className="flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-white bg-amber-500/90 rounded-xl hover:bg-amber-600 active:scale-95 shadow-sm transition-all">
+              <UserPlus size={14} />
+              <span className="hidden sm:inline">Add Customer</span>
+            </button>
+          </SubscriptionGate>
         </div>
       </div>
 
